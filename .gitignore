@@ -1,0 +1,47 @@
+# Gradle
+.gradle/
+build/
+*.jar
+*.war
+*.ear
+gradle-wrapper.jar
+.gradletasknamecache
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Java
+*.class
+*.log
+target/
+out/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Compiled files
+*.o
+*.so
+*.dll
+
+# Environment
+.env
+.env.local
+
+# System
+Thumbs.db
+.DS_Store
+
+# Backup files
+*.bak
+*.orig

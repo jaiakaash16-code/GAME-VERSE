@@ -1,0 +1,116 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.gameverse'
+version = '1.0.0'
+
+subprojects {
+    apply plugin: 'java'
+    
+    java {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+    
+    repositories {
+        mavenCentral()
+    }
+    
+    dependencies {
+        // JUnit 5
+        testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.3'
+        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.3'
+    }
+    
+    test {
+        useJUnitPlatform()
+    }
+}
+
+project(':core') {
+    dependencies {
+        // No external dependencies for core
+    }
+}
+
+project(':player') {
+    dependencies {
+        implementation project(':core')
+        implementation project(':database')
+    }
+}
+
+project(':achievements') {
+    dependencies {
+        implementation project(':core')
+        implementation project(':player')
+        implementation project(':database')
+    }
+}
+
+project(':rewards') {
+    dependencies {
+        implementation project(':core')
+        implementation project(':player')
+        implementation project(':database')
+    }
+}
+
+project(':leaderboard') {
+    dependencies {
+        implementation project(':core')
+        implementation project(':player')
+        implementation project(':database')
+    }
+}
+
+project(':database') {
+    dependencies {
+        implementation 'org.xerial:sqlite-jdbc:3.45.1.0'
+    }
+}
+
+project(':ui') {
+    apply plugin: 'application'
+    
+    mainClassName = 'com.gameverse.ui.GameLauncher'
+    
+    tasks.withType(AbstractArchiveTask) {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
+    
+    dependencies {
+        implementation project(':core')
+        implementation project(':player')
+        implementation project(':achievements')
+        implementation project(':rewards')
+        implementation project(':leaderboard')
+        implementation project(':games:core')
+        implementation project(':games:chess')
+        implementation project(':games:snake')
+        implementation project(':games:pong')
+        implementation project(':games:tictactoe')
+        implementation project(':games:memory')
+        implementation project(':games:racing')
+    }
+    
+    run {
+        standardInput = System.in
+    }
+}
+
+project(':games:core') {
+    dependencies {
+        implementation project(':core')
+    }
+}
+
+['chess', 'snake', 'pong', 'tictactoe', 'memory', 'racing'].each { game ->
+    project(":games:${game}") {
+        dependencies {
+            implementation project(':core')
+            implementation project(':games:core')
+        }
+    }
+}
