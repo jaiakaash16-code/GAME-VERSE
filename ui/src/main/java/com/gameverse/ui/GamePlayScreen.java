@@ -685,6 +685,13 @@ public class GamePlayScreen extends JFrame {
                 } else {
                     g2.setColor(CARD_BG);
                     g2.fillRoundRect(x, y, cw, ch, 10, 10);
+
+                    // Subtle fruit-colored border hint on the card back
+                    g2.setColor(new Color(fruitColor.getRed(), fruitColor.getGreen(), fruitColor.getBlue(), 50));
+                    g2.setStroke(new BasicStroke(2));
+                    g2.drawRoundRect(x + 1, y + 1, cw - 2, ch - 2, 10, 10);
+                    g2.setStroke(new BasicStroke(1));
+
                     g2.setColor(new Color(60, 60, 90));
                     g2.drawRoundRect(x, y, cw, ch, 10, 10);
                     g2.setColor(new Color(50, 50, 75));
@@ -694,6 +701,11 @@ public class GamePlayScreen extends JFrame {
                     FontMetrics fm = g2.getFontMetrics();
                     g2.drawString("?", x + (cw - fm.stringWidth("?")) / 2,
                         y + (ch + fm.getAscent() - fm.getDescent()) / 2);
+
+                    // Small fruit-colored pip in the corner as a gentle hint
+                    int pip = Math.max(6, cw / 8);
+                    g2.setColor(new Color(fruitColor.getRed(), fruitColor.getGreen(), fruitColor.getBlue(), 130));
+                    g2.fillOval(x + cw - pip - 6, y + ch - pip - 6, pip, pip);
                 }
             }
         }
