@@ -345,34 +345,12 @@ public class LoginPage extends JFrame {
         errorMessageLabel.setText("");
     }
     
+    /**
+     * Running this class directly from an IDE launches the full GameVerse flow:
+     * the login page is shown by GameLauncher, and a successful login continues
+     * into the main menu / game hub instead of stopping at a confirmation dialog.
+     */
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            new LoginPage(new LoginCallback() {
-                @Override
-                public void onLoginSuccess(Player player) {
-                    JOptionPane.showMessageDialog(null, 
-                        "Login successful!\nWelcome, " + player.getUsername(),
-                        "Success",
-                        JOptionPane.INFORMATION_MESSAGE);
-                    System.exit(0);
-                }
-                
-                @Override
-                public void onLoginFailed(String message) {
-                    JOptionPane.showMessageDialog(null, 
-                        "Login failed: " + message,
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE);
-                }
-                
-                @Override
-                public void onSignUp() {
-                    JOptionPane.showMessageDialog(null, 
-                        "Sign up page would open here",
-                        "Sign Up",
-                        JOptionPane.INFORMATION_MESSAGE);
-                }
-            });
-        });
+        GameLauncher.main(args);
     }
 }
