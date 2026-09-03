@@ -5,9 +5,6 @@ import com.gameverse.player.PlayerManager;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 
 /**
  * Login page GUI for GameVerse platform.
@@ -16,11 +13,12 @@ import java.awt.event.KeyListener;
 public class LoginPage extends JFrame {
     
     private JTextField emailField;
-    private JPasswordField passwordField;
     private JButton loginButton;
     private JButton signUpButton;
+    private JButton checkPasswordButton;
     private JLabel errorMessageLabel;
     private JCheckBox rememberMeCheckBox;
+    private PasswordFieldRow passwordRow;
     private PlayerManager playerManager;
     private LoginCallback loginCallback;
     
@@ -31,6 +29,8 @@ public class LoginPage extends JFrame {
     private static final Color BUTTON_HOVER_COLOR = new Color(120, 170, 255);
     private static final Color TEXT_COLOR = new Color(200, 200, 220);
     private static final Color ERROR_COLOR = new Color(255, 100, 100);
+    private static final Color PLACEHOLDER_COLOR = new Color(120, 120, 140);
+    private static final String EMAIL_PLACEHOLDER = "Enter your email";
     
     public interface LoginCallback {
         void onLoginSuccess(Player player);
@@ -111,30 +111,25 @@ public class LoginPage extends JFrame {
         JLabel emailLabel = createLabel("Email Address");
         panel.add(emailLabel);
         
-        emailField = createTextField("Enter your email");
+        emailField = createTextField(EMAIL_PLACEHOLDER);
         panel.add(emailField);
         panel.add(Box.createVerticalStrut(15));
         
-        // Password Label and Field
+        // Password Label and Field (with inline Show/Hide toggle)
         JLabel passwordLabel = createLabel("Password");
         panel.add(passwordLabel);
         
-        passwordField = createPasswordField("Enter your password");
-        panel.add(passwordField);
-        panel.add(Box.createVerticalStrut(10));
+        passwordRow = new PasswordFieldRow(BUTTON_COLOR, BUTTON_HOVER_COLOR);
+        panel.add(passwordRow);
+        panel.add(Box.createVerticalStrut(4));
         
-        // Password Requirements
-        JLabel requirementsLabel = new JLabel(
-            "<html>Password must contain:<br>" +
-            "• At least 6 characters<br>" +
-            "• At least 1 capital letter (A-Z)<br>" +
-            "• At least 1 symbol (!@#$%^&*...)" +
-            "</html>"
-        );
-        requirementsLabel.setFont(new Font("Arial", Font.PLAIN, 11));
-        requirementsLabel.setForeground(new Color(150, 150, 170));
-        panel.add(requirementsLabel);
-        panel.add(Box.createVerticalStrut(15));
+        // The requirements list is intentionally not shown here; the Check
+        // Password link pops up only the rules the typed password is missing.
+        checkPasswordButton = createCheckPasswordButton();
+        checkPasswordButton.addActionListener(e ->
+            PasswordFieldRow.showPasswordCheck(this, passwordRow.getPassword()));
+        panel.add(createCheckRow(checkPasswordButton));
+        panel.add(Box.createVerticalStrut(12));
         
         // Remember Me Checkbox
         rememberMeCheckBox = new JCheckBox("Remember me");
@@ -160,14 +155,13 @@ public class LoginPage extends JFrame {
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         
         // Login Button
-        loginButton = createButton("Login");
-        loginButton.setBackground(BUTTON_COLOR);
+        loginButton = createButton("Login", BUTTON_COLOR, BUTTON_HOVER_COLOR);
         panel.add(loginButton);
         panel.add(Box.createVerticalStrut(10));
         
         // Sign Up Button
-        signUpButton = createButton("Create New Account");
-        signUpButton.setBackground(new Color(60, 80, 100));
+        signUpButton = createButton("Create New Account",
+            new Color(60, 80, 100), new Color(80, 100, 120));
         panel.add(signUpButton);
         
         return panel;
@@ -195,7 +189,7 @@ public class LoginPage extends JFrame {
         
         // Placeholder text
         field.setText(placeholder);
-        field.setForeground(new Color(120, 120, 140));
+        field.setForeground(PLACEHOLDER_COLOR);
         
         field.addFocusListener(new java.awt.event.FocusAdapter() {
             @Override
@@ -203,6 +197,8 @@ public class LoginPage extends JFrame {
                 if (field.getText().equals(placeholder)) {
                     field.setText("");
                     field.setForeground(TEXT_COLOR);
+                } else {
+                    field.selectAll();
                 }
             }
             
@@ -210,7 +206,7 @@ public class LoginPage extends JFrame {
             public void focusLost(java.awt.event.FocusEvent e) {
                 if (field.getText().isEmpty()) {
                     field.setText(placeholder);
-                    field.setForeground(new Color(120, 120, 140));
+                    field.setForeground(PLACEHOLDER_COLOR);
                 }
             }
         });
@@ -218,26 +214,42 @@ public class LoginPage extends JFrame {
         return field;
     }
     
-    private JPasswordField createPasswordField(String placeholder) {
-        JPasswordField field = new JPasswordField();
-        field.setFont(new Font("Arial", Font.PLAIN, 13));
-        field.setBackground(PANEL_COLOR);
-        field.setForeground(TEXT_COLOR);
-        field.setCaretColor(BUTTON_COLOR);
-        field.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(70, 70, 90), 1),
-            BorderFactory.createEmptyBorder(8, 10, 8, 10)
-        ));
-        field.setPreferredSize(new Dimension(300, 40));
-        field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        
-        return field;
+    private JButton createCheckPasswordButton() {
+        JButton check = new JButton("Check Password");
+        check.setFont(new Font("Arial", Font.BOLD, 11));
+        check.setForeground(BUTTON_COLOR);
+        check.setContentAreaFilled(false);
+        check.setBorderPainted(false);
+        check.setFocusPainted(false);
+        check.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        check.setToolTipText("Show missing password requirements");
+        check.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                check.setForeground(BUTTON_HOVER_COLOR);
+            }
+            
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                check.setForeground(BUTTON_COLOR);
+            }
+        });
+        return check;
     }
     
-    private JButton createButton(String text) {
+    private JPanel createCheckRow(JComponent control) {
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        row.setBackground(BACKGROUND_COLOR);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 22));
+        row.add(control);
+        return row;
+    }
+    
+    private JButton createButton(String text, Color baseColor, Color hoverColor) {
         JButton button = new JButton(text);
         button.setFont(new Font("Arial", Font.BOLD, 13));
         button.setForeground(Color.WHITE);
+        button.setBackground(baseColor);
         button.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
         button.setFocusPainted(false);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -249,12 +261,12 @@ public class LoginPage extends JFrame {
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent e) {
-                button.setBackground(BUTTON_HOVER_COLOR);
+                button.setBackground(hoverColor);
             }
             
             @Override
             public void mouseExited(java.awt.event.MouseEvent e) {
-                button.setBackground(button == loginButton ? BUTTON_COLOR : new Color(60, 80, 100));
+                button.setBackground(baseColor);
             }
         });
         
@@ -273,26 +285,17 @@ public class LoginPage extends JFrame {
             dispose();
         });
         
-        // Enter key in password field
-        passwordField.addKeyListener(new KeyListener() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                    handleLogin();
-                }
-            }
-            
-            @Override
-            public void keyTyped(KeyEvent e) {}
-            
-            @Override
-            public void keyReleased(KeyEvent e) {}
-        });
+        // Pressing Enter in either field submits the login form
+        emailField.addActionListener(e -> handleLogin());
+        passwordRow.getField().addActionListener(e -> handleLogin());
     }
     
     private void handleLogin() {
         String email = emailField.getText().trim();
-        String password = new String(passwordField.getPassword());
+        if (email.isEmpty() || email.equalsIgnoreCase(EMAIL_PLACEHOLDER)) {
+            email = "";
+        }
+        String password = passwordRow.getPassword();
         
         // Clear previous error
         errorMessageLabel.setText("");
@@ -302,6 +305,11 @@ public class LoginPage extends JFrame {
         
         if (!validationError.isEmpty()) {
             errorMessageLabel.setText(validationError);
+            if (LoginValidator.isValidEmail(email)) {
+                passwordRow.getField().requestFocusInWindow();
+            } else {
+                emailField.requestFocusInWindow();
+            }
             return;
         }
         
@@ -340,8 +348,9 @@ public class LoginPage extends JFrame {
      * Clear all fields
      */
     public void clearFields() {
-        emailField.setText("");
-        passwordField.setText("");
+        emailField.setText(EMAIL_PLACEHOLDER);
+        emailField.setForeground(PLACEHOLDER_COLOR);
+        passwordRow.clear();
         errorMessageLabel.setText("");
     }
     

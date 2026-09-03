@@ -1,5 +1,7 @@
 package com.gameverse.ui;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -105,5 +107,33 @@ public class LoginValidator {
         }
         
         return ""; // Valid
+    }
+    
+    /**
+     * Return the list of password requirements this password still fails, with
+     * one tailored entry per missing rule. An empty list means every rule
+     * passes.
+     * @param password the password to check
+     * @return missing-requirement messages, never null
+     */
+    public static List<String> getMissingPasswordRequirements(String password) {
+        List<String> missing = new ArrayList<>();
+        if (password == null || password.isEmpty()) {
+            return missing;
+        }
+
+        if (password.length() < 6) {
+            missing.add("At least 6 characters (currently " + password.length() + ")");
+        }
+
+        if (!password.matches(".*[A-Z].*")) {
+            missing.add("At least 1 capital letter (A-Z)");
+        }
+
+        if (!password.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?].*")) {
+            missing.add("At least 1 symbol (!@#$%^&*...)");
+        }
+
+        return missing;
     }
 }

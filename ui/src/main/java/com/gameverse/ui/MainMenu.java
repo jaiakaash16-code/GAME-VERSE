@@ -1,17 +1,15 @@
 package com.gameverse.ui;
 
 import com.gameverse.achievements.AchievementManager;
-import com.gameverse.core.GameRegistry;
 import com.gameverse.leaderboard.LeaderboardManager;
 import com.gameverse.player.Player;
 import com.gameverse.player.PlayerManager;
-import com.gameverse.rewards.CoinManager;
 import com.gameverse.rewards.XPManager;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.List;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.Set;
 
 /**
@@ -21,22 +19,25 @@ import java.util.Set;
 public class MainMenu extends JFrame {
 
     private Player player;
-    private JPanel profilePanel;
     private JPanel gamesPanel;
     private Runnable onLogout;
     private MainMenuCallback callback;
 
-    // UI Constants
-    private static final Color BG = new Color(18, 18, 28);
-    private static final Color PANEL_BG = new Color(28, 28, 42);
-    private static final Color CARD_BG = new Color(35, 35, 55);
+    // ── Palette ──
+    private static final Color BG = new Color(15, 16, 26);
+    private static final Color PANEL_BG = new Color(23, 24, 38);
+    private static final Color SIDE_BG = new Color(26, 28, 46);
+    private static final Color CARD_BG = new Color(31, 33, 52);
+    private static final Color CARD_HOVER = new Color(39, 42, 64);
+    private static final Color CARD_LINE = new Color(52, 55, 80);
     private static final Color ACCENT = new Color(100, 150, 255);
+    private static final Color ACCENT_DEEP = new Color(70, 115, 235);
     private static final Color GREEN = new Color(80, 200, 120);
     private static final Color GOLD = new Color(255, 200, 60);
-    private static final Color TEXT = new Color(210, 210, 225);
-    private static final Color TEXT_DIM = new Color(140, 140, 160);
+    private static final Color TEXT = new Color(225, 226, 240);
+    private static final Color TEXT_DIM = new Color(148, 150, 170);
 
-    // Game names and descriptions
+    // Game names, icons and descriptions
     private static final String[][] GAMES = {
         {"Chess", "♟️", "Classic chess with AI opponent"},
         {"Snake", "🐍", "Classic snake — eat, grow, survive"},
@@ -44,6 +45,16 @@ public class MainMenu extends JFrame {
         {"Tic-Tac-Toe", "❌", "Turn-based with smart AI"},
         {"Memory Game", "🧠", "Match the hidden pairs"},
         {"Mini Racing", "🏎️", "Race to the finish line"}
+    };
+
+    // One accent per game card
+    private static final Color[] GAME_ACCENTS = {
+        new Color(130, 165, 255), // Chess  — blue
+        new Color(95, 215, 145),  // Snake  — green
+        new Color(95, 200, 225),  // Pong   — cyan
+        new Color(255, 185, 95),  // TTT    — orange
+        new Color(200, 150, 255), // Memory — purple
+        new Color(255, 125, 120)  // Racing — red
     };
 
     public interface MainMenuCallback {
@@ -61,7 +72,7 @@ public class MainMenu extends JFrame {
     private void initUI() {
         setTitle("GameVerse — Game Hub");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setSize(900, 650);
+        setSize(1060, 720);
         setLocationRelativeTo(null);
         setResizable(false);
 
@@ -69,47 +80,75 @@ public class MainMenu extends JFrame {
         root.setBackground(BG);
         setContentPane(root);
 
-        // ── Header ──
         root.add(createHeader(), BorderLayout.NORTH);
 
-        // ── Center: games grid + profile sidebar ──
-        JPanel center = new JPanel(new BorderLayout(10, 0));
+        JPanel center = new JPanel(new BorderLayout(16, 0));
         center.setBackground(BG);
-        center.setBorder(BorderFactory.createEmptyBorder(0, 15, 10, 15));
+        center.setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
+
+        JPanel leftSide = new JPanel(new BorderLayout(0, 14));
+        leftSide.setOpaque(false);
+        leftSide.add(createHero(), BorderLayout.NORTH);
 
         gamesPanel = createGamesPanel();
-        center.add(gamesPanel, BorderLayout.CENTER);
+        leftSide.add(gamesPanel, BorderLayout.CENTER);
+        center.add(leftSide, BorderLayout.CENTER);
 
-        profilePanel = createProfilePanel();
-        center.add(profilePanel, BorderLayout.EAST);
+        center.add(createProfilePanel(), BorderLayout.EAST);
 
         root.add(center, BorderLayout.CENTER);
     }
 
-    /* ─────────────────── HEADER ─────────────────── */
+    /* ═══════════════════ HEADER ═══════════════════ */
 
     private JPanel createHeader() {
-        JPanel header = new JPanel(new BorderLayout());
-        header.setBackground(PANEL_BG);
-        header.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(50, 50, 70)),
-            BorderFactory.createEmptyBorder(12, 25, 12, 25)
+        JPanel strip = new JPanel(new BorderLayout(0, 0));
+        strip.setBackground(PANEL_BG);
+        strip.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(45, 48, 70)),
+            BorderFactory.createEmptyBorder(10, 22, 10, 22)
         ));
 
-        JLabel title = new JLabel("🎮 GameVerse");
-        title.setFont(new Font("Segoe UI", Font.BOLD, 24));
-        title.setForeground(ACCENT);
+        // ── Brand (left) ──
+        JPanel brand = new JPanel(new BorderLayout(12, 0));
+        brand.setOpaque(false);
 
+        JLabel logo = new JLabel("🎮", SwingConstants.CENTER);
+        logo.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 24));
+        logo.setOpaque(true);
+        logo.setBackground(ACCENT_DEEP);
+        logo.setForeground(Color.WHITE);
+        logo.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
+        logo.setPreferredSize(new Dimension(44, 40));
+
+        JPanel brandText = new JPanel();
+        brandText.setOpaque(false);
+        brandText.setLayout(new BoxLayout(brandText, BoxLayout.Y_AXIS));
+
+        JLabel title = new JLabel("GameVerse");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 21));
+        title.setForeground(new Color(235, 240, 255));
+
+        JLabel sub = new JLabel("Your arcade hub — play, earn XP, climb the ranks");
+        sub.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        sub.setForeground(TEXT_DIM);
+
+        brandText.add(title);
+        brandText.add(sub);
+        brand.add(logo, BorderLayout.WEST);
+        brand.add(brandText, BorderLayout.CENTER);
+
+        // ── Right nav buttons ──
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         right.setOpaque(false);
 
-        JButton achievementsBtn = makeHeaderBtn("🏆 Achievements");
+        JButton achievementsBtn = makeNavButton("🏆 Achievements", CARD_BG, ACCENT_DEEP);
         achievementsBtn.addActionListener(e -> showAchievements());
 
-        JButton leaderboardBtn = makeHeaderBtn("📊 Leaderboard");
+        JButton leaderboardBtn = makeNavButton("👑 Leaderboard", CARD_BG, new Color(120, 95, 40));
         leaderboardBtn.addActionListener(e -> showLeaderboard());
 
-        JButton logoutBtn = makeHeaderBtn("🚪 Logout");
+        JButton logoutBtn = makeNavButton("🚪  Logout", new Color(52, 30, 34), new Color(180, 70, 70));
         logoutBtn.addActionListener(e -> {
             PlayerManager.getInstance().setCurrentPlayer(null);
             dispose();
@@ -120,186 +159,332 @@ public class MainMenu extends JFrame {
         right.add(leaderboardBtn);
         right.add(logoutBtn);
 
-        header.add(title, BorderLayout.WEST);
-        header.add(right, BorderLayout.EAST);
-        return header;
+        strip.add(brand, BorderLayout.WEST);
+        strip.add(right, BorderLayout.EAST);
+        return strip;
     }
 
-    private JButton makeHeaderBtn(String text) {
+    private JButton makeNavButton(String text, Color bg, Color hoverBg) {
         JButton b = new JButton(text);
         b.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        b.setBackground(CARD_BG);
+        b.setBackground(bg);
         b.setForeground(TEXT);
         b.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(60, 60, 80)),
-            BorderFactory.createEmptyBorder(6, 14, 6, 14)
+            BorderFactory.createLineBorder(new Color(60, 64, 90)),
+            BorderFactory.createEmptyBorder(7, 14, 7, 14)
         ));
         b.setFocusPainted(false);
         b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        b.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseEntered(java.awt.event.MouseEvent e) {
-                b.setBackground(new Color(50, 50, 75));
+        b.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                b.setBackground(hoverBg);
+                b.setForeground(Color.WHITE);
             }
-            public void mouseExited(java.awt.event.MouseEvent e) {
-                b.setBackground(CARD_BG);
+            @Override
+            public void mouseExited(MouseEvent e) {
+                b.setBackground(bg);
+                b.setForeground(TEXT);
             }
         });
         return b;
     }
 
-    /* ─────────────────── GAMES GRID ─────────────────── */
+    /* ═══════════════════ HERO BANNER ═══════════════════ */
+
+    private JPanel createHero() {
+        RoundedPanel hero = new RoundedPanel(new BorderLayout(0, 0),
+            new Color(28, 32, 60), new Color(52, 58, 100), 18, true);
+        hero.setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
+
+        // Greeting (left)
+        JPanel greet = new JPanel();
+        greet.setOpaque(false);
+        greet.setLayout(new BoxLayout(greet, BoxLayout.Y_AXIS));
+
+        JLabel hi = new JLabel("Welcome back, " + displayName(player.getUsername()) + " 👋");
+        hi.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        hi.setForeground(new Color(240, 243, 255));
+
+        JLabel tag = new JLabel("Pick a game below — every win earns XP, coins and achievements.");
+        tag.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        tag.setForeground(new Color(170, 175, 200));
+
+        greet.add(hi);
+        greet.add(Box.createVerticalStrut(3));
+        greet.add(tag);
+
+        // Stat chips (right)
+        JPanel chipRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        chipRow.setOpaque(false);
+        chipRow.add(makeChip("Level", String.valueOf(player.getLevel()), ACCENT));
+        chipRow.add(makeChip("XP", String.valueOf(player.getXp()), GOLD));
+        chipRow.add(makeChip("Coins", String.valueOf(player.getCoins()), GREEN));
+
+        JPanel chipWrap = new JPanel();
+        chipWrap.setOpaque(false);
+        chipWrap.setLayout(new BoxLayout(chipWrap, BoxLayout.Y_AXIS));
+        chipWrap.add(Box.createVerticalGlue());
+        chipWrap.add(chipRow);
+        chipWrap.add(Box.createVerticalGlue());
+
+        hero.add(greet, BorderLayout.WEST);
+        hero.add(chipWrap, BorderLayout.EAST);
+        return hero;
+    }
+
+    private JPanel makeChip(String caption, String value, Color valueColor) {
+        RoundedPanel chip = new RoundedPanel(null, new Color(20, 22, 40), new Color(58, 64, 96), 12, false);
+        chip.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+
+        JPanel inner = new JPanel();
+        inner.setOpaque(false);
+        inner.setLayout(new BoxLayout(inner, BoxLayout.Y_AXIS));
+
+        JLabel val = new JLabel(value, SwingConstants.CENTER);
+        val.setFont(new Font("Consolas", Font.BOLD, 17));
+        val.setForeground(valueColor);
+        val.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel cap = new JLabel(caption, SwingConstants.CENTER);
+        cap.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        cap.setForeground(TEXT_DIM);
+        cap.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        inner.add(val);
+        inner.add(cap);
+        chip.setLayout(new BorderLayout());
+        chip.add(inner, BorderLayout.CENTER);
+        return chip;
+    }
+
+    /* ═══════════════════ GAMES GRID ═══════════════════ */
 
     private JPanel createGamesPanel() {
-        JPanel panel = new JPanel(new GridLayout(3, 2, 12, 12));
+        JPanel panel = new JPanel(new GridLayout(3, 2, 14, 14));
         panel.setOpaque(false);
-        panel.setBorder(BorderFactory.createEmptyBorder(15, 5, 5, 5));
-
-        for (String[] g : GAMES) {
-            panel.add(createGameCard(g[0], g[1], g[2]));
+        for (int i = 0; i < GAMES.length; i++) {
+            panel.add(createGameCard(i));
         }
         return panel;
     }
 
-    private JPanel createGameCard(String name, String icon, String desc) {
-        JPanel card = new JPanel();
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBackground(CARD_BG);
-        card.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(50, 50, 70), 1, true),
-            BorderFactory.createEmptyBorder(20, 18, 18, 18)
-        ));
-        card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+    /** Visual state of one game card so hover listeners can restore it. */
+    private static class CardState {
+        RoundedPanel card;
+        JLabel play;
+        JLabel record;
+        Color line;
+        Color playColor;
+        boolean hovering;
+    }
 
-        JLabel iconLabel = new JLabel(icon);
-        iconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 36));
-        iconLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    private JPanel createGameCard(int index) {
+        String name = GAMES[index][0];
+        String icon = GAMES[index][1];
+        String desc = GAMES[index][2];
+        Color accent = GAME_ACCENTS[index];
+
+        RoundedPanel card = new RoundedPanel(null, CARD_BG, CARD_LINE, 16, false);
+        card.setBorder(BorderFactory.createEmptyBorder(14, 16, 12, 16));
+
+        JPanel inner = new JPanel();
+        inner.setOpaque(false);
+        inner.setLayout(new BoxLayout(inner, BoxLayout.Y_AXIS));
+
+        // Icon tile + record pill (top row)
+        JPanel topRow = new JPanel(new BorderLayout(0, 0));
+        topRow.setOpaque(false);
+
+        RoundedPanel tile = new RoundedPanel(new BorderLayout(),
+            new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 40),
+            new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 110), 10, false);
+        tile.setPreferredSize(new Dimension(42, 42));
+        tile.setMaximumSize(new Dimension(42, 42));
+
+        JLabel iconLabel = new JLabel(icon, SwingConstants.CENTER);
+        iconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 21));
+        tile.add(iconLabel, BorderLayout.CENTER);
+        topRow.add(tile, BorderLayout.WEST);
+
+        int best = player.getGameHighScore(name);
+        String recText = best > 0 ? "🏅 Best " + best : "No record yet";
+        JLabel record = new JLabel(recText);
+        record.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        record.setForeground(best > 0 ? GOLD : TEXT_DIM);
+        record.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(best > 0 ? new Color(120, 100, 40) : CARD_LINE),
+            BorderFactory.createEmptyBorder(3, 8, 3, 8)));
+        topRow.add(record, BorderLayout.EAST);
+
+        inner.add(topRow);
+        inner.add(Box.createVerticalStrut(12));
 
         JLabel nameLabel = new JLabel(name);
-        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 17));
         nameLabel.setForeground(TEXT);
         nameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        inner.add(nameLabel);
+        inner.add(Box.createVerticalStrut(2));
 
-        JLabel descLabel = new JLabel("<html><body style='width: 200px'>" + desc + "</body></html>");
+        JLabel descLabel = new JLabel(desc);
         descLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         descLabel.setForeground(TEXT_DIM);
         descLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        inner.add(descLabel);
+        inner.add(Box.createVerticalStrut(10));
 
-        int best = player.getGameHighScore(name);
-        JLabel bestLabel = new JLabel(best > 0 ? "Best Score: " + best : "No record yet");
-        bestLabel.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        bestLabel.setForeground(best > 0 ? GOLD : TEXT_DIM);
-        bestLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        // Bottom row: "Play" affordance
+        JPanel bottomRow = new JPanel(new BorderLayout(0, 0));
+        bottomRow.setOpaque(false);
+        JLabel play = new JLabel("Play  ▶");
+        play.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        play.setForeground(new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 160));
+        bottomRow.add(play, BorderLayout.EAST);
+        inner.add(bottomRow);
+        inner.add(Box.createVerticalGlue());
 
-        card.add(iconLabel);
-        card.add(Box.createVerticalStrut(8));
-        card.add(nameLabel);
-        card.add(Box.createVerticalStrut(4));
-        card.add(descLabel);
-        card.add(Box.createVerticalStrut(10));
-        card.add(bestLabel);
+        card.setLayout(new BorderLayout());
+        card.add(inner, BorderLayout.CENTER);
 
-        // Hover + click
-        card.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseEntered(java.awt.event.MouseEvent e) {
-                card.setBackground(new Color(45, 45, 70));
-                card.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(ACCENT, 1, true),
-                    BorderFactory.createEmptyBorder(20, 18, 18, 18)
-                ));
+        // ── Hover + click (attached to every child so any click works) ──
+        CardState state = new CardState();
+        state.card = card;
+        state.play = play;
+        state.record = record;
+        state.line = CARD_LINE;
+        state.playColor = play.getForeground();
+
+        MouseAdapter adapter = new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                if (state.hovering) return;
+                state.hovering = true;
+                state.card.setFill(CARD_HOVER);
+                state.card.setLine(accent);
+                play.setForeground(accent);
+                record.setForeground(accent);
+                state.card.repaint();
             }
-            public void mouseExited(java.awt.event.MouseEvent e) {
-                card.setBackground(CARD_BG);
-                card.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(new Color(50, 50, 70), 1, true),
-                    BorderFactory.createEmptyBorder(20, 18, 18, 18)
-                ));
+            @Override
+            public void mouseExited(MouseEvent e) {
+                if (!state.hovering) return;
+                state.hovering = false;
+                state.card.setFill(CARD_BG);
+                state.card.setLine(state.line);
+                play.setForeground(state.playColor);
+                record.setForeground(best > 0 ? GOLD : TEXT_DIM);
+                state.card.repaint();
             }
-            public void mouseClicked(java.awt.event.MouseEvent e) {
+            @Override
+            public void mouseClicked(MouseEvent e) {
                 dispose();
                 if (callback != null) callback.onPlayGame(name);
             }
-        });
+        };
 
+        wireMouse(card, adapter);
         return card;
     }
 
-    /* ─────────────────── PROFILE SIDEBAR ─────────────────── */
+    /** Attach one mouse adapter to a component and every child of it. */
+    private void wireMouse(JComponent root, MouseAdapter adapter) {
+        root.addMouseListener(adapter);
+        if (root instanceof Container) {
+            for (Component c : ((Container) root).getComponents()) {
+                if (c instanceof JComponent) wireMouse((JComponent) c, adapter);
+            }
+        }
+    }
+
+    /* ═══════════════════ PROFILE SIDEBAR ═══════════════════ */
 
     private JPanel createProfilePanel() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBackground(PANEL_BG);
-        panel.setPreferredSize(new Dimension(220, 0));
-        panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 1, 0, 0, new Color(50, 50, 70)),
-            BorderFactory.createEmptyBorder(20, 15, 20, 15)
-        ));
+        RoundedPanel panel = new RoundedPanel(null, SIDE_BG, new Color(46, 50, 76), 18, false);
+        panel.setPreferredSize(new Dimension(262, 0));
 
-        // Avatar circle placeholder
-        JLabel avatar = new JLabel("👤");
-        avatar.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 48));
+        JPanel body = new JPanel();
+        body.setOpaque(false);
+        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+        body.setBorder(BorderFactory.createEmptyBorder(22, 18, 14, 18));
+
+        // Avatar
+        Avatar avatar = new Avatar(player.getUsername());
         avatar.setAlignmentX(Component.CENTER_ALIGNMENT);
+        body.add(avatar);
+        body.add(Box.createVerticalStrut(10));
 
-        JLabel username = new JLabel(player.getUsername());
-        username.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        username.setForeground(ACCENT);
-        username.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel nameLbl = new JLabel(player.getUsername(), SwingConstants.CENTER);
+        nameLbl.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        nameLbl.setForeground(ACCENT);
+        nameLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
+        body.add(nameLbl);
 
-        panel.add(avatar);
-        panel.add(Box.createVerticalStrut(5));
-        panel.add(username);
-        panel.add(Box.createVerticalStrut(20));
+        JLabel roleLbl = new JLabel("Member", SwingConstants.CENTER);
+        roleLbl.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        roleLbl.setForeground(TEXT_DIM);
+        roleLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
+        body.add(roleLbl);
 
-        // Stats
-        addStatRow(panel, "Level", String.valueOf(player.getLevel()), ACCENT);
-        addStatRow(panel, "XP", String.valueOf(player.getXp()), GOLD);
-        addStatRow(panel, "Coins", String.valueOf(player.getCoins()), GREEN);
+        body.add(Box.createVerticalStrut(16));
 
-        panel.add(Box.createVerticalStrut(15));
-        addDivider(panel);
-        panel.add(Box.createVerticalStrut(15));
+        // Stat rows
+        addStatRow(body, "Level", String.valueOf(player.getLevel()), ACCENT);
+        addStatRow(body, "XP", String.valueOf(player.getXp()), GOLD);
+        addStatRow(body, "Coins", String.valueOf(player.getCoins()), GREEN);
 
-        addStatRow(panel, "Games Played", String.valueOf(player.getGamesPlayed()), TEXT);
-        addStatRow(panel, "Wins", String.valueOf(player.getWins()), GREEN);
-        addStatRow(panel, "Win Rate", String.format("%.0f%%", player.getWinRate()), TEXT);
+        body.add(Box.createVerticalStrut(10));
+        addDivider(body);
+        body.add(Box.createVerticalStrut(10));
 
-        // XP to next level
+        addStatRow(body, "Games Played", String.valueOf(player.getGamesPlayed()), TEXT);
+        addStatRow(body, "Wins", String.valueOf(player.getWins()), GREEN);
+        addStatRow(body, "Win Rate", String.format("%.0f%%", player.getWinRate()), TEXT);
+
+        body.add(Box.createVerticalStrut(10));
+        addDivider(body);
+        body.add(Box.createVerticalStrut(12));
+
+        // XP progress
         XPManager xpMgr = XPManager.getInstance();
         int xpToNext = xpMgr.getXpToNextLevel(player);
-        panel.add(Box.createVerticalStrut(20));
-        addDivider(panel);
-        panel.add(Box.createVerticalStrut(12));
-
         if (xpToNext >= 0) {
             JLabel xpLabel = new JLabel("XP to next level: " + xpToNext);
             xpLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
             xpLabel.setForeground(TEXT_DIM);
             xpLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            panel.add(xpLabel);
-            panel.add(Box.createVerticalStrut(6));
+            body.add(xpLabel);
+            body.add(Box.createVerticalStrut(6));
 
-            // XP progress bar
             int currentLevelXp = player.getLevel() * xpMgr.getXpPerLevel();
             int prevLevelXp = (player.getLevel() - 1) * xpMgr.getXpPerLevel();
-            float progress = (float)(player.getXp() - prevLevelXp) / (currentLevelXp - prevLevelXp);
-            JProgressBar xpBar = new JProgressBar(0, 100);
-            xpBar.setValue((int)(progress * 100));
-            xpBar.setStringPainted(true);
-            xpBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 18));
-            xpBar.setAlignmentX(Component.LEFT_ALIGNMENT);
-            xpBar.setBackground(new Color(40, 40, 55));
-            xpBar.setForeground(ACCENT);
-            panel.add(xpBar);
+            float progress = (float) (player.getXp() - prevLevelXp) / Math.max(1, currentLevelXp - prevLevelXp);
+
+            XpBar bar = new XpBar(Math.round(progress * 100));
+            bar.setAlignmentX(Component.LEFT_ALIGNMENT);
+            bar.setPreferredSize(new Dimension(220, 16));
+            bar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 16));
+            body.add(bar);
         } else {
             JLabel maxLbl = new JLabel("🏆 Max Level Reached!");
             maxLbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
             maxLbl.setForeground(GOLD);
             maxLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
-            panel.add(maxLbl);
+            body.add(maxLbl);
         }
 
-        panel.add(Box.createVerticalGlue());
+        body.add(Box.createVerticalGlue());
 
+        // Footer note
+        JLabel foot = new JLabel("💡 Tip: hover a game card, then click to play", SwingConstants.CENTER);
+        foot.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        foot.setForeground(TEXT_DIM);
+        foot.setAlignmentX(Component.CENTER_ALIGNMENT);
+        foot.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+        body.add(foot);
+
+        panel.setLayout(new BorderLayout());
+        panel.add(body, BorderLayout.CENTER);
         return panel;
     }
 
@@ -320,18 +505,161 @@ public class MainMenu extends JFrame {
         row.add(lbl, BorderLayout.WEST);
         row.add(val, BorderLayout.EAST);
         panel.add(row);
-        panel.add(Box.createVerticalStrut(4));
+        panel.add(Box.createVerticalStrut(5));
     }
 
     private void addDivider(JPanel panel) {
         JSeparator sep = new JSeparator();
         sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
-        sep.setForeground(new Color(50, 50, 70));
+        sep.setForeground(new Color(52, 56, 82));
         sep.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(sep);
     }
 
-    /* ─────────────────── ACHIEVEMENTS DIALOG ─────────────────── */
+    /** Turn "ashaz@gmail.com" into "ashaz" for the greeting. */
+    private static String displayName(String username) {
+        if (username == null) return "player";
+        int at = username.indexOf('@');
+        String base = at > 0 ? username.substring(0, at) : username;
+        if (base.isEmpty()) return "player";
+        return base.substring(0, 1).toUpperCase() + base.substring(1);
+    }
+
+    /* ═══════════════════ SMALL CUSTOM COMPONENTS ═══════════════════ */
+
+    /** Rounded panel with optional vertical gradient, painted by hand. */
+    private static class RoundedPanel extends JPanel {
+        private Color fill;
+        private Color line;
+        private final int arc;
+        private final boolean gradient;
+
+        RoundedPanel(LayoutManager layout, Color fill, Color line, int arc, boolean gradient) {
+            super(layout);
+            setOpaque(false);
+            this.fill = fill;
+            this.line = line;
+            this.arc = arc;
+            this.gradient = gradient;
+        }
+
+        void setFill(Color fill) {
+            this.fill = fill;
+            repaint();
+        }
+
+        void setLine(Color line) {
+            this.line = line;
+            repaint();
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            int w = getWidth();
+            int h = getHeight();
+            if (fill != null) {
+                if (gradient && h > 0) {
+                    g2.setPaint(new GradientPaint(0, 0, fill, 0, h, new Color(20, 22, 42)));
+                } else {
+                    g2.setPaint(fill);
+                }
+                g2.fillRoundRect(0, 0, w - 1, h - 1, arc, arc);
+            }
+            if (line != null) {
+                g2.setColor(line);
+                g2.drawRoundRect(0, 0, w - 1, h - 1, arc, arc);
+            }
+            g2.dispose();
+            super.paintComponent(g);
+        }
+    }
+
+    /** Circular avatar with the player's initial and an online dot. */
+    private static class Avatar extends JComponent {
+        private final String initial;
+        private final Color tone;
+
+        Avatar(String username) {
+            String display = displayName(username);
+            this.initial = display.substring(0, 1);
+            this.tone = new Color(100, 150, 255);
+            setPreferredSize(new Dimension(84, 84));
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            int s = 72;
+            int x = (getWidth() - s) / 2;
+            int y = (getHeight() - s) / 2;
+
+            // soft shadow
+            g2.setColor(new Color(0, 0, 0, 70));
+            g2.fillOval(x + 2, y + 4, s, s);
+
+            // gradient disc
+            g2.setPaint(new GradientPaint(x, y, new Color(120, 160, 255), x, y + s, new Color(60, 95, 210)));
+            g2.fillOval(x, y, s, s);
+
+            // rim
+            g2.setColor(new Color(190, 210, 255, 160));
+            g2.drawOval(x, y, s - 1, s - 1);
+
+            // initial
+            g2.setColor(Color.WHITE);
+            g2.setFont(new Font("Segoe UI", Font.BOLD, 34));
+            FontMetrics fm = g2.getFontMetrics();
+            g2.drawString(initial,
+                x + (s - fm.stringWidth(initial)) / 2,
+                y + (s + fm.getAscent() - fm.getDescent()) / 2);
+
+            // online dot
+            g2.setColor(new Color(20, 22, 42));
+            g2.fillOval(x + s - 16, y + s - 16, 18, 18);
+            g2.setColor(new Color(80, 200, 120));
+            g2.fillOval(x + s - 13, y + s - 13, 12, 12);
+            g2.dispose();
+        }
+    }
+
+    /** Rounded XP progress bar with percentage text. */
+    private static class XpBar extends JComponent {
+        private final int percent;
+
+        XpBar(int percent) {
+            this.percent = Math.max(0, Math.min(100, percent));
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            int w = getWidth();
+            int h = getHeight();
+
+            g2.setColor(new Color(38, 40, 62));
+            g2.fillRoundRect(0, 0, w - 1, h - 1, 8, 8);
+
+            int fillW = (int) ((w - 2) * percent / 100f);
+            if (fillW > 0) {
+                g2.setPaint(new GradientPaint(0, 0, new Color(100, 160, 255), w, 0, new Color(60, 105, 230)));
+                g2.fillRoundRect(1, 1, fillW, h - 2, 7, 7);
+            }
+
+            g2.setColor(TEXT_DIM);
+            g2.setFont(new Font("Consolas", Font.BOLD, 9));
+            FontMetrics fm = g2.getFontMetrics();
+            String label = percent + "%";
+            g2.drawString(label, (w - fm.stringWidth(label)) / 2,
+                (h + fm.getAscent() - fm.getDescent()) / 2);
+            g2.dispose();
+        }
+    }
+
+    /* ═══════════════════ ACHIEVEMENTS DIALOG ═══════════════════ */
 
     private void showAchievements() {
         AchievementManager mgr = AchievementManager.getInstance();
@@ -372,7 +700,7 @@ public class MainMenu extends JFrame {
     private JPanel createAchievementCard(String name, String desc, boolean owned, int xp, int coins) {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBackground(owned ? new Color(28, 55, 40) : CARD_BG);
+        card.setBackground(owned ? new Color(28, 55, 40) : new Color(35, 35, 55));
         card.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(owned ? GREEN : new Color(50, 50, 70), 1, true),
             BorderFactory.createEmptyBorder(12, 14, 12, 14)));
@@ -399,7 +727,7 @@ public class MainMenu extends JFrame {
         return card;
     }
 
-    /* ─────────────────── LEADERBOARD DIALOG ─────────────────── */
+    /* ═══════════════════ LEADERBOARD DIALOG ═══════════════════ */
 
     private void showLeaderboard() {
         LeaderboardManager mgr = LeaderboardManager.getInstance();
@@ -436,7 +764,7 @@ public class MainMenu extends JFrame {
                 boolean me = entry.getUsername().equals(player.getUsername());
                 JPanel row = new JPanel(new BorderLayout());
                 row.setOpaque(me);
-                row.setBackground(me ? new Color(45, 60, 105) : CARD_BG);
+                row.setBackground(me ? new Color(45, 60, 105) : new Color(35, 35, 55));
                 row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
                 row.setAlignmentX(Component.LEFT_ALIGNMENT);
                 row.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));

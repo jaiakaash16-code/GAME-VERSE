@@ -28,6 +28,12 @@ public class SnakeGame extends BaseGame {
     private int updateInterval;
     private int updateCounter;
     
+    // The game stays frozen until the player presses a direction, so it can't
+    // run into a wall before the window has keyboard focus.
+    private boolean awaitingFirstMove;
+    
+    private final java.util.Random random = new java.util.Random();
+    
     public SnakeGame() {
         super("Snake");
         this.boardWidth = 20;
@@ -42,6 +48,7 @@ public class SnakeGame extends BaseGame {
         snake = new Snake(boardWidth / 2, boardHeight / 2);
         spawnFood();
         setupDifficulty();
+        awaitingFirstMove = true;
     }
     
     @Override
@@ -59,6 +66,12 @@ public class SnakeGame extends BaseGame {
     @Override
     public void update(float deltaTime) {
         if (!isRunning()) {
+            return;
+        }
+        
+        // Nothing moves (player or AI) until the player makes their first move,
+        // otherwise the snake can hit a wall before the window has focus.
+        if (awaitingFirstMove) {
             return;
         }
         
@@ -81,9 +94,11 @@ public class SnakeGame extends BaseGame {
                 spawnAIFood();
             }
             
-            // AI snake collision with itself or walls
+            // AI snake collision with itself or walls — respawn it somewhere far
+            // from the player instead of resetting it onto the player's starting
+            // square (which used to kill the player instantly head-on).
             if (aiSnake.checkSelfCollision() || !isWithinBounds(aiSnake.getHead())) {
-                aiSnake.reset();
+                aiSnake = spawnAISnake();
                 aiScore = Math.max(0, aiScore - 50);
             }
             
@@ -122,21 +137,37 @@ public class SnakeGame extends BaseGame {
             case EASY -> {
                 updateInterval = 3; // Slow updates
                 hasAiSnake = false;
+                aiSnake = null;
+                aiFood = null;
             }
             case MEDIUM -> {
                 updateInterval = 2; // Moderate speed
                 hasAiSnake = true;
-                aiSnake = new Snake(5, 5);
+                aiSnake = spawnAISnake();
                 spawnAIFood();
             }
             case HARD -> {
                 updateInterval = 1; // Fast updates
                 hasAiSnake = true;
-                aiSnake = new Snake(5, 5);
+                aiSnake = spawnAISnake();
                 spawnAIFood();
             }
         }
         updateCounter = 0;
+    }
+    
+    /**
+     * Difficulty changes must take effect immediately. The UI applies the
+     * chosen difficulty after the game object is created (which happens after
+     * initialize()), so re-apply the speed/AI setup here instead of leaving
+     * the default difficulty's setup active.
+     */
+    @Override
+    public void setDifficulty(Difficulty difficulty) {
+        super.setDifficulty(difficulty);
+        if (snake != null) {
+            setupDifficulty();
+        }
     }
     
     /** AI snake moves towards food or away from player */
@@ -146,39 +177,96 @@ public class SnakeGame extends BaseGame {
         Position head = aiSnake.getHead();
         Position target = aiFood.getPosition();
         
-        int dx = target.x - head.x;
-        int dy = target.y - head.y;
+        int chaseX = target.x;
+        int chaseY = target.y;
         
-        // Hard AI: also considers avoiding player snake
+        // Hard AI: when the player is close, prefer moving away from the player
+        // instead of chasing the food.
         if (difficulty == Difficulty.HARD) {
             Position playerHead = snake.getHead();
             int distToPlayer = Math.abs(head.x - playerHead.x) + Math.abs(head.y - playerHead.y);
             if (distToPlayer < 5) {
-                // Too close to player — move away
-                dx = head.x - playerHead.x;
-                dy = head.y - playerHead.y;
+                chaseX = head.x + (head.x - playerHead.x);
+                chaseY = head.y + (head.y - playerHead.y);
             }
         }
         
-        // Choose direction with preference towards target
-        if (Math.abs(dx) > Math.abs(dy)) {
-            aiSnake.setDirection(dx > 0 ? 1 : -1, 0);
-        } else if (Math.abs(dy) > 0) {
-            aiSnake.setDirection(0, dy > 0 ? 1 : -1);
-        } else {
-            // Random direction if at same position
-            int[][] dirs = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}};
-            int[] d = dirs[(int)(Math.random() * 4)];
-            aiSnake.setDirection(d[0], d[1]);
+        // Pick the safe neighbour that gets closest to the chase point. Walls,
+        // the AI's own body and the player's snake are all avoided, so the AI
+        // rarely suicides and respawns onto the player.
+        int bestScore = Integer.MAX_VALUE;
+        int bestDirX = 0, bestDirY = 0;
+        boolean found = false;
+        int[][] dirs = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        for (int[] d : dirs) {
+            int nx = head.x + d[0];
+            int ny = head.y + d[1];
+            if (!isWithinBounds(new Position(nx, ny))) continue;
+            if (aiSnake.contains(nx, ny)) continue;
+            if (snake != null && snake.contains(nx, ny)) continue;
+            int score = Math.abs(nx - chaseX) + Math.abs(ny - chaseY);
+            if (score < bestScore) {
+                bestScore = score;
+                bestDirX = d[0];
+                bestDirY = d[1];
+                found = true;
+            }
         }
+        if (found) {
+            aiSnake.setDirection(bestDirX, bestDirY);
+        }
+        // No safe neighbour: keep the current heading; the wall / self-collision
+        // check in update() respawns the AI somewhere safe next tick.
     }
     
     private void spawnFood() {
-        food = new Food((int) (Math.random() * boardWidth), (int) (Math.random() * boardHeight));
+        food = new Food(randomFreeCell(snake));
     }
     
     private void spawnAIFood() {
-        aiFood = new Food((int) (Math.random() * boardWidth), (int) (Math.random() * boardHeight));
+        aiFood = new Food(randomFreeCell(snake, aiSnake));
+    }
+    
+    /** Find a random board cell that none of the given snakes occupies. */
+    private Position randomFreeCell(Snake... snakes) {
+        for (int attempt = 0; attempt < 200; attempt++) {
+            int x = random.nextInt(boardWidth);
+            int y = random.nextInt(boardHeight);
+            boolean occupied = false;
+            for (Snake s : snakes) {
+                if (s != null && s.contains(x, y)) {
+                    occupied = true;
+                    break;
+                }
+            }
+            if (!occupied) return new Position(x, y);
+        }
+        return new Position(random.nextInt(boardWidth), random.nextInt(boardHeight));
+    }
+    
+    /**
+     * Create a fresh AI snake on a free cell as far as possible from the player,
+     * so a respawned AI never appears on top of the player's snake.
+     */
+    private Snake spawnAISnake() {
+        Position playerHead = snake != null ? snake.getHead() : null;
+        Position best = null;
+        int bestDist = -1;
+        for (int x = 1; x < boardWidth - 1; x++) {
+            for (int y = 1; y < boardHeight - 1; y++) {
+                if (snake != null && snake.contains(x, y)) continue;
+                int dist = playerHead == null ? Integer.MAX_VALUE
+                    : Math.abs(x - playerHead.x) + Math.abs(y - playerHead.y);
+                if (dist > bestDist) {
+                    bestDist = dist;
+                    best = new Position(x, y);
+                }
+            }
+        }
+        if (best == null) {
+            best = randomFreeCell(snake);
+        }
+        return new Snake(best.x, best.y);
     }
     
     private boolean isWithinBounds(Position position) {
@@ -196,13 +284,14 @@ public class SnakeGame extends BaseGame {
     }
     
     private void reset() {
-        snake.reset();
+        snake.reset(boardWidth / 2, boardHeight / 2);
         spawnFood();
         aiScore = 0;
         if (hasAiSnake) {
-            aiSnake = new Snake(5, 5);
+            aiSnake = spawnAISnake();
             spawnAIFood();
         }
+        awaitingFirstMove = true;
     }
     
     // Inner classes
@@ -267,14 +356,26 @@ public class SnakeGame extends BaseGame {
             return body.getFirst();
         }
         
-        void reset() {
+        void reset(int x, int y) {
             body.clear();
-            body.add(new Position(10, 10));
+            body.add(new Position(x, y));
+            nextDirX = 1;
+            nextDirY = 0;
+        }
+        
+        boolean contains(int x, int y) {
+            for (Position p : body) {
+                if (p.x == x && p.y == y) return true;
+            }
+            return false;
         }
         
         void setDirection(int dirX, int dirY) {
-            // Prevent 180-degree turns
-            if (nextDirX != -dirX || nextDirY != -dirY) {
+            // Prevent 180-degree turns… but only once there is a body to run
+            // into. A single-segment snake may reverse freely, which matters for
+            // the very first move (it has not moved yet, so "reversing" is safe).
+            boolean reversing = nextDirX == -dirX && nextDirY == -dirY;
+            if (body.size() == 1 || !reversing) {
                 nextDirX = dirX;
                 nextDirY = dirY;
             }
@@ -286,6 +387,10 @@ public class SnakeGame extends BaseGame {
         
         Food(int x, int y) {
             position = new Position(x, y);
+        }
+        
+        Food(Position p) {
+            position = p;
         }
         
         Position getPosition() {
@@ -304,6 +409,9 @@ public class SnakeGame extends BaseGame {
             case "left" -> snake.setDirection(-1, 0);
             case "right" -> snake.setDirection(1, 0);
         }
+        // The first directional input releases the frozen start state, so the
+        // game never ends before the player has a chance to react.
+        awaitingFirstMove = false;
     }
     
     /** Get the update interval for the game loop (ticks between moves) */
@@ -329,5 +437,63 @@ public class SnakeGame extends BaseGame {
     /** Get AI score */
     public int getAiScore() {
         return aiScore;
+    }
+    
+    // Rendering API (plain getters, so the UI never needs reflection into
+    // private fields / inner classes)
+    
+    /** Board width in cells */
+    public int getBoardWidth() {
+        return boardWidth;
+    }
+    
+    /** Board height in cells */
+    public int getBoardHeight() {
+        return boardHeight;
+    }
+    
+    /** Player head column, or -1 if the snake is not initialized */
+    public int getPlayerHeadX() {
+        return snake != null ? snake.getHead().x : -1;
+    }
+    
+    /** Player head row, or -1 if the snake is not initialized */
+    public int getPlayerHeadY() {
+        return snake != null ? snake.getHead().y : -1;
+    }
+    
+    /** Player food column, or -1 if not spawned */
+    public int getFoodX() {
+        return food != null ? food.getPosition().x : -1;
+    }
+    
+    /** Player food row, or -1 if not spawned */
+    public int getFoodY() {
+        return food != null ? food.getPosition().y : -1;
+    }
+    
+    /** AI head column, or -1 when there is no AI snake */
+    public int getAiHeadX() {
+        return hasAiSnake && aiSnake != null ? aiSnake.getHead().x : -1;
+    }
+    
+    /** AI head row, or -1 when there is no AI snake */
+    public int getAiHeadY() {
+        return hasAiSnake && aiSnake != null ? aiSnake.getHead().y : -1;
+    }
+    
+    /** AI food column, or -1 when there is no AI food */
+    public int getAiFoodX() {
+        return hasAiSnake && aiFood != null ? aiFood.getPosition().x : -1;
+    }
+    
+    /** AI food row, or -1 when there is no AI food */
+    public int getAiFoodY() {
+        return hasAiSnake && aiFood != null ? aiFood.getPosition().y : -1;
+    }
+    
+    /** True while the game is frozen, waiting for the player's first move */
+    public boolean isWaitingForFirstMove() {
+        return awaitingFirstMove;
     }
 }

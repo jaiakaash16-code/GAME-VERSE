@@ -254,7 +254,7 @@ public class GamePlayScreen extends JFrame {
             case "Tic-Tac-Toe" -> "\uD83C\uDFAE Click cell to place X | Beat the AI!" + diffStr;
             case "Memory Game" -> "\uD83C\uDFAE Click cards to flip | Beat the AI opponent!" + diffStr;
             case "Mini Racing" -> "\uD83C\uDFAE \u2191 accelerate, \u2193 brake | Race to the finish!" + diffStr;
-            case "Chess" -> "\uD83C\uDFAE Click white piece \u2192 click destination | Capture the black king!" + diffStr;
+            case "Chess" -> "\uD83C\uDFAE Click white piece \u2192 click destination | Move king 2 squares to castle | Checkmate to win!" + diffStr;
             default -> "\uD83C\uDFAE Play!" + diffStr;
         };
     }
@@ -391,6 +391,18 @@ public class GamePlayScreen extends JFrame {
                     int col = (mx - sx) / cs, row = (my - sy) / cs;
                     if (row >= 0 && row < 8 && col >= 0 && col < 8) {
                         boolean ok = cg.handleClick(row, col);
+                        // Pawn reached the last rank: let the player choose the
+                        // promotion piece before the AI answers.
+                        if (ok && cg.isPromotionPending()) {
+                            String[] pieces = {"Queen", "Rook", "Bishop", "Knight"};
+                            int pick = JOptionPane.showOptionDialog(GamePlayScreen.this,
+                                "Your pawn reached the last rank \u2014 choose its promotion piece:",
+                                "Pawn Promotion",
+                                JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE,
+                                null, pieces, pieces[0]);
+                            char chosen = pick >= 0 ? "QRBN".charAt(pick) : 'Q';
+                            cg.promote(chosen);
+                        }
                         statusLabel.setText(ok ? "\u265F\uFE0F Move made! Score: " + game.getScore() : "\u265F\uFE0F Invalid move");
                     }
                 }
@@ -513,84 +525,59 @@ public class GamePlayScreen extends JFrame {
 
     /* ──── SNAKE ──── */
     private void drawSnake(Graphics2D g2, int w, int h) {
-        try {
-            SnakeGame sg = (SnakeGame) game;
-            Field snakeF = game.getClass().getDeclaredField("snake");
-            snakeF.setAccessible(true);
-            Object snake = snakeF.get(game);
-            Object head = snake.getClass().getDeclaredMethod("getHead").invoke(snake);
-            Field xf = head.getClass().getDeclaredField("x"); xf.setAccessible(true);
-            Field yf = head.getClass().getDeclaredField("y"); yf.setAccessible(true);
-            int hx = xf.getInt(head), hy = yf.getInt(head);
+        SnakeGame sg = (SnakeGame) game;
+        int bw = sg.getBoardWidth();
+        int bh = sg.getBoardHeight();
+        int cs = Math.min(w / bw, h / bh);
+        int ox = (w - bw * cs) / 2, oy = (h - bh * cs) / 2;
 
-            Field foodF = game.getClass().getDeclaredField("food");
-            foodF.setAccessible(true);
-            Object food = foodF.get(game);
-            Object fpos = food.getClass().getMethod("getPosition").invoke(food);
-            int fx = xf.getInt(fpos), fy = yf.getInt(fpos);
+        // Grid
+        for (int x = 0; x < bw; x++) {
+            for (int y = 0; y < bh; y++) {
+                g2.setColor((x + y) % 2 == 0 ? new Color(18, 22, 32) : new Color(22, 28, 40));
+                g2.fillRect(ox + x * cs, oy + y * cs, cs - 1, cs - 1);
+            }
+        }
 
-            Field bWF = game.getClass().getDeclaredField("boardWidth"); bWF.setAccessible(true);
-            Field bHF = game.getClass().getDeclaredField("boardHeight"); bHF.setAccessible(true);
-            int bw = bWF.getInt(game), bh = bHF.getInt(game);
-            int cs = Math.min(w / bw, h / bh);
-            int ox = (w - bw * cs) / 2, oy = (h - bh * cs) / 2;
-
-            // Grid
-            for (int x = 0; x < bw; x++)
-                for (int y = 0; y < bh; y++) {
-                    g2.setColor((x + y) % 2 == 0 ? new Color(18, 22, 32) : new Color(22, 28, 40));
-                    g2.fillRect(ox + x * cs, oy + y * cs, cs - 1, cs - 1);
-                }
-
-            // AI snake (if present)
-            if (sg.hasAiSnake()) {
-                // Get Position class from SnakeGame via reflection
-                Class<?> posClass = null;
-                for (Class<?> inner : SnakeGame.class.getDeclaredClasses()) {
-                    if (inner.getSimpleName().equals("Position")) {
-                        posClass = inner;
-                        break;
-                    }
-                }
-                if (posClass != null) {
-                    Field pxField = posClass.getDeclaredField("x"); pxField.setAccessible(true);
-                    Field pyField = posClass.getDeclaredField("y"); pyField.setAccessible(true);
-
-                    Object aiHead = sg.getAiSnakeHead();
-                    if (aiHead != null) {
-                        int ahx = pxField.getInt(aiHead), ahy = pyField.getInt(aiHead);
-                        g2.setColor(RED);
-                        g2.fillRoundRect(ox + ahx * cs + 1, oy + ahy * cs + 1, cs - 2, cs - 2, 6, 6);
-                        g2.setColor(new Color(255, 120, 120));
-                        g2.fillOval(ox + ahx * cs + cs/3, oy + ahy * cs + cs/4, 5, 5);
-                    }
-                    Object aiFoodPos = sg.getAiFoodPosition();
-                    if (aiFoodPos != null) {
-                        int afx = pxField.getInt(aiFoodPos), afy = pyField.getInt(aiFoodPos);
-                        g2.setColor(GOLD);
-                        g2.fillOval(ox + afx * cs + 3, oy + afy * cs + 3, cs - 6, cs - 6);
-                    }
-                }
+        // AI snake (if present)
+        if (sg.hasAiSnake()) {
+            int ahx = sg.getAiHeadX();
+            int ahy = sg.getAiHeadY();
+            if (ahx >= 0) {
+                g2.setColor(RED);
+                g2.fillRoundRect(ox + ahx * cs + 1, oy + ahy * cs + 1, cs - 2, cs - 2, 6, 6);
+                g2.setColor(new Color(255, 120, 120));
+                g2.fillOval(ox + ahx * cs + cs / 3, oy + ahy * cs + cs / 4, 5, 5);
             }
 
-            // Food (red apple)
-            g2.setColor(RED);
-            g2.fillOval(ox + fx * cs + 3, oy + fy * cs + 3, cs - 6, cs - 6);
-            g2.setColor(new Color(255, 120, 120));
-            g2.fillOval(ox + fx * cs + cs/3, oy + fy * cs + cs/4, 4, 4);
+            int afx = sg.getAiFoodX();
+            int afy = sg.getAiFoodY();
+            if (afx >= 0) {
+                g2.setColor(GOLD);
+                g2.fillOval(ox + afx * cs + 3, oy + afy * cs + 3, cs - 6, cs - 6);
+            }
+        }
 
-            // Snake head
-            g2.setColor(GREEN);
-            g2.fillRoundRect(ox + hx * cs + 1, oy + hy * cs + 1, cs - 2, cs - 2, 6, 6);
-            g2.setColor(new Color(140, 255, 180));
-            g2.fillOval(ox + hx * cs + cs/3, oy + hy * cs + cs/4, 5, 5);
+        // Food (red apple)
+        g2.setColor(RED);
+        g2.fillOval(ox + sg.getFoodX() * cs + 3, oy + sg.getFoodY() * cs + 3, cs - 6, cs - 6);
+        g2.setColor(new Color(255, 120, 120));
+        g2.fillOval(ox + sg.getFoodX() * cs + cs / 3, oy + sg.getFoodY() * cs + cs / 4, 4, 4);
 
-            g2.setColor(TEXT_DIM);
-            g2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-            String hint = "Arrow keys to move  |  Eat the red food!  |  [" + currentDifficulty.getDisplayName() + "]";
-            if (sg.hasAiSnake()) hint += "  |  AI snake active!";
-            g2.drawString(hint, 15, h - 10);
-        } catch (Exception e) { drawCenter(g2, "Snake — Use arrow keys!", w, h); }
+        // Snake head
+        g2.setColor(GREEN);
+        g2.fillRoundRect(ox + sg.getPlayerHeadX() * cs + 1, oy + sg.getPlayerHeadY() * cs + 1, cs - 2, cs - 2, 6, 6);
+        g2.setColor(new Color(140, 255, 180));
+        g2.fillOval(ox + sg.getPlayerHeadX() * cs + cs / 3, oy + sg.getPlayerHeadY() * cs + cs / 4, 5, 5);
+
+        g2.setColor(TEXT_DIM);
+        g2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        String hint = sg.isWaitingForFirstMove()
+            ? "Press an arrow key / WASD to start  |  Eat the red food!"
+            : "Arrow keys to move  |  Eat the red food!";
+        hint += "  |  [" + currentDifficulty.getDisplayName() + "]";
+        if (sg.hasAiSnake()) hint += "  |  AI snake active!";
+        g2.drawString(hint, 15, h - 10);
     }
 
     /* ──── PONG ──── */
@@ -869,6 +856,15 @@ public class GamePlayScreen extends JFrame {
                     g2.fillRect(x, y, cs, cs);
                 }
 
+                // Red glow under a king that is in check
+                char sq = cg.getPiece(r, c);
+                boolean kingInCheck = (sq == 'K' && cg.isWhiteInCheck())
+                    || (sq == 'k' && cg.isBlackInCheck());
+                if (kingInCheck) {
+                    g2.setColor(new Color(230, 60, 60, 150));
+                    g2.fillOval(x + 2, y + 2, cs - 4, cs - 4);
+                }
+
                 // Piece
                 char piece = cg.getPiece(r, c);
                 if (piece != ' ') {
@@ -898,7 +894,16 @@ public class GamePlayScreen extends JFrame {
 
         g2.setColor(TEXT_DIM);
         g2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        String turn = cg.isWhiteToMove() ? "Your turn (white)" : "AI thinking...";
+        String turn;
+        if (cg.isWhiteInCheck()) {
+            turn = "\u26A0 CHECK! Your king is under attack — get it safe";
+        } else if (cg.isBlackInCheck()) {
+            turn = "\u2694 Check on black — keep the pressure on!";
+        } else if (cg.isPromotionPending()) {
+            turn = "\u2B50 Pawn reached the last rank \u2014 choose its promotion piece";
+        } else {
+            turn = cg.isWhiteToMove() ? "Your turn (white)" : "AI thinking...";
+        }
         g2.drawString(turn + "  |  Click piece \u2192 click destination  |  [" + currentDifficulty.getDisplayName() + "]", 15, h - 5);
     }
 

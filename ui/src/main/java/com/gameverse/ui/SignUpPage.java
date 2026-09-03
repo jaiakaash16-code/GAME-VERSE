@@ -13,11 +13,12 @@ import java.awt.*;
 public class SignUpPage extends JFrame {
     
     private JTextField emailField;
-    private JPasswordField passwordField;
-    private JPasswordField confirmPasswordField;
     private JButton signUpButton;
     private JButton backButton;
+    private JButton checkPasswordButton;
     private JLabel errorMessageLabel;
+    private PasswordFieldRow passwordRow;
+    private PasswordFieldRow confirmRow;
     private PlayerManager playerManager;
     private SignUpCallback signUpCallback;
     
@@ -28,6 +29,8 @@ public class SignUpPage extends JFrame {
     private static final Color BUTTON_HOVER_COLOR = new Color(120, 220, 120);
     private static final Color TEXT_COLOR = new Color(200, 200, 220);
     private static final Color ERROR_COLOR = new Color(255, 100, 100);
+    private static final Color PLACEHOLDER_COLOR = new Color(120, 120, 140);
+    private static final String EMAIL_PLACEHOLDER = "Enter your email";
     
     public interface SignUpCallback {
         void onSignUpSuccess(Player player);
@@ -108,37 +111,32 @@ public class SignUpPage extends JFrame {
         JLabel emailLabel = createLabel("Email Address");
         panel.add(emailLabel);
         
-        emailField = createTextField("Enter your email");
+        emailField = createTextField(EMAIL_PLACEHOLDER);
         panel.add(emailField);
         panel.add(Box.createVerticalStrut(15));
         
-        // Password Label and Field
+        // Password Label and Field (with inline Show/Hide toggle)
         JLabel passwordLabel = createLabel("Password");
         panel.add(passwordLabel);
         
-        passwordField = createPasswordField("Enter your password");
-        panel.add(passwordField);
-        panel.add(Box.createVerticalStrut(10));
+        passwordRow = new PasswordFieldRow(BUTTON_COLOR, BUTTON_HOVER_COLOR);
+        panel.add(passwordRow);
+        panel.add(Box.createVerticalStrut(4));
         
-        // Password Requirements
-        JLabel requirementsLabel = new JLabel(
-            "<html>Password requirements:<br>" +
-            "• At least 6 characters<br>" +
-            "• At least 1 capital letter (A-Z)<br>" +
-            "• At least 1 symbol (!@#$%^&*...)" +
-            "</html>"
-        );
-        requirementsLabel.setFont(new Font("Arial", Font.PLAIN, 11));
-        requirementsLabel.setForeground(new Color(150, 150, 170));
-        panel.add(requirementsLabel);
-        panel.add(Box.createVerticalStrut(15));
+        // The requirements list is intentionally not shown here; the Check
+        // Password link pops up only the rules the typed password is missing.
+        checkPasswordButton = createCheckPasswordButton();
+        checkPasswordButton.addActionListener(e ->
+            PasswordFieldRow.showPasswordCheck(this, passwordRow.getPassword()));
+        panel.add(createCheckRow(checkPasswordButton));
+        panel.add(Box.createVerticalStrut(14));
         
         // Confirm Password Label and Field
         JLabel confirmLabel = createLabel("Confirm Password");
         panel.add(confirmLabel);
         
-        confirmPasswordField = createPasswordField("Re-enter your password");
-        panel.add(confirmPasswordField);
+        confirmRow = new PasswordFieldRow(BUTTON_COLOR, BUTTON_HOVER_COLOR);
+        panel.add(confirmRow);
         panel.add(Box.createVerticalStrut(20));
         
         // Error Message Label
@@ -156,12 +154,13 @@ public class SignUpPage extends JFrame {
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         
         // Sign Up Button
-        signUpButton = createButton("Create Account", BUTTON_COLOR);
+        signUpButton = createButton("Create Account", BUTTON_COLOR, BUTTON_HOVER_COLOR);
         panel.add(signUpButton);
         panel.add(Box.createVerticalStrut(10));
         
         // Back Button
-        backButton = createButton("Back to Login", new Color(60, 80, 100));
+        backButton = createButton("Back to Login",
+            new Color(60, 80, 100), new Color(80, 100, 120));
         panel.add(backButton);
         
         return panel;
@@ -189,7 +188,7 @@ public class SignUpPage extends JFrame {
         
         // Placeholder text
         field.setText(placeholder);
-        field.setForeground(new Color(120, 120, 140));
+        field.setForeground(PLACEHOLDER_COLOR);
         
         field.addFocusListener(new java.awt.event.FocusAdapter() {
             @Override
@@ -197,6 +196,8 @@ public class SignUpPage extends JFrame {
                 if (field.getText().equals(placeholder)) {
                     field.setText("");
                     field.setForeground(TEXT_COLOR);
+                } else {
+                    field.selectAll();
                 }
             }
             
@@ -204,7 +205,7 @@ public class SignUpPage extends JFrame {
             public void focusLost(java.awt.event.FocusEvent e) {
                 if (field.getText().isEmpty()) {
                     field.setText(placeholder);
-                    field.setForeground(new Color(120, 120, 140));
+                    field.setForeground(PLACEHOLDER_COLOR);
                 }
             }
         });
@@ -212,27 +213,42 @@ public class SignUpPage extends JFrame {
         return field;
     }
     
-    private JPasswordField createPasswordField(String placeholder) {
-        JPasswordField field = new JPasswordField();
-        field.setFont(new Font("Arial", Font.PLAIN, 13));
-        field.setBackground(PANEL_COLOR);
-        field.setForeground(TEXT_COLOR);
-        field.setCaretColor(BUTTON_COLOR);
-        field.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(70, 70, 90), 1),
-            BorderFactory.createEmptyBorder(8, 10, 8, 10)
-        ));
-        field.setPreferredSize(new Dimension(300, 40));
-        field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        
-        return field;
+    private JButton createCheckPasswordButton() {
+        JButton check = new JButton("Check Password");
+        check.setFont(new Font("Arial", Font.BOLD, 11));
+        check.setForeground(BUTTON_COLOR);
+        check.setContentAreaFilled(false);
+        check.setBorderPainted(false);
+        check.setFocusPainted(false);
+        check.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        check.setToolTipText("Show missing password requirements");
+        check.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                check.setForeground(BUTTON_HOVER_COLOR);
+            }
+            
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                check.setForeground(BUTTON_COLOR);
+            }
+        });
+        return check;
     }
     
-    private JButton createButton(String text, Color backgroundColor) {
+    private JPanel createCheckRow(JComponent control) {
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        row.setBackground(BACKGROUND_COLOR);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 22));
+        row.add(control);
+        return row;
+    }
+    
+    private JButton createButton(String text, Color baseColor, Color hoverColor) {
         JButton button = new JButton(text);
         button.setFont(new Font("Arial", Font.BOLD, 13));
         button.setForeground(Color.WHITE);
-        button.setBackground(backgroundColor);
+        button.setBackground(baseColor);
         button.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
         button.setFocusPainted(false);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -244,14 +260,12 @@ public class SignUpPage extends JFrame {
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent e) {
-                if (button == signUpButton) {
-                    button.setBackground(BUTTON_HOVER_COLOR);
-                }
+                button.setBackground(hoverColor);
             }
             
             @Override
             public void mouseExited(java.awt.event.MouseEvent e) {
-                button.setBackground(backgroundColor);
+                button.setBackground(baseColor);
             }
         });
         
@@ -261,6 +275,11 @@ public class SignUpPage extends JFrame {
     private void attachListeners() {
         // Sign Up Button
         signUpButton.addActionListener(e -> handleSignUp());
+        
+        // Pressing Enter walks through the fields, then submits
+        emailField.addActionListener(e -> passwordRow.getField().requestFocusInWindow());
+        passwordRow.getField().addActionListener(e -> confirmRow.getField().requestFocusInWindow());
+        confirmRow.getField().addActionListener(e -> handleSignUp());
         
         // Back Button
         backButton.addActionListener(e -> {
@@ -273,8 +292,11 @@ public class SignUpPage extends JFrame {
     
     private void handleSignUp() {
         String email = emailField.getText().trim();
-        String password = new String(passwordField.getPassword());
-        String confirmPassword = new String(confirmPasswordField.getPassword());
+        if (email.isEmpty() || email.equalsIgnoreCase(EMAIL_PLACEHOLDER)) {
+            email = "";
+        }
+        String password = passwordRow.getPassword();
+        String confirmPassword = confirmRow.getPassword();
         
         // Clear previous error
         errorMessageLabel.setText("");
@@ -284,12 +306,18 @@ public class SignUpPage extends JFrame {
         
         if (!validationError.isEmpty()) {
             errorMessageLabel.setText(validationError);
+            if (LoginValidator.isValidEmail(email)) {
+                passwordRow.getField().requestFocusInWindow();
+            } else {
+                emailField.requestFocusInWindow();
+            }
             return;
         }
         
         // Check if passwords match
         if (!password.equals(confirmPassword)) {
             errorMessageLabel.setText("Passwords do not match");
+            confirmRow.getField().requestFocusInWindow();
             return;
         }
         
@@ -330,9 +358,10 @@ public class SignUpPage extends JFrame {
      * Clear all fields
      */
     public void clearFields() {
-        emailField.setText("");
-        passwordField.setText("");
-        confirmPasswordField.setText("");
+        emailField.setText(EMAIL_PLACEHOLDER);
+        emailField.setForeground(PLACEHOLDER_COLOR);
+        passwordRow.clear();
+        confirmRow.clear();
         errorMessageLabel.setText("");
     }
     
