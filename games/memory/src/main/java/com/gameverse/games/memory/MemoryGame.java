@@ -3,6 +3,7 @@ package com.gameverse.games.memory;
 import com.gameverse.core.Difficulty;
 import com.gameverse.core.GameResult;
 import com.gameverse.games.core.BaseGame;
+import java.awt.Color;
 import java.util.*;
 
 /**
@@ -37,6 +38,20 @@ public class MemoryGame extends BaseGame {
     public static final String[] SYMBOLS = {
         "\uD83C\uDF4E", "\uD83C\uDF4A", "\uD83C\uDF4B", "\uD83C\uDF47",
         "\uD83C\uDF53", "\uD83E\uDED0", "\uD83C\uDF51", "\uD83C\uDF52"
+    };
+
+    // Distinct color per fruit (aligned with SYMBOLS) so every pair is
+    // recognizable at a glance: apple, tangerine, lemon, grapes,
+    // strawberry, mango, peach, cherries.
+    public static final Color[] FRUIT_COLORS = {
+        new Color(235, 70, 70),    // red
+        new Color(255, 155, 55),   // orange
+        new Color(250, 215, 60),   // yellow
+        new Color(170, 110, 255),  // purple
+        new Color(255, 95, 145),   // pink
+        new Color(255, 185, 75),   // amber
+        new Color(255, 145, 165),  // soft pink
+        new Color(215, 60, 95)     // crimson
     };
 
     public MemoryGame() {
@@ -426,6 +441,11 @@ public class MemoryGame extends BaseGame {
 
     public static String getSymbolForValue(int value) {
         return SYMBOLS[value % SYMBOLS.length];
+    }
+
+    /** Color for the fruit at the given card value (same indexing as SYMBOLS). */
+    public static Color getColorForValue(int value) {
+        return FRUIT_COLORS[value % FRUIT_COLORS.length];
     }
 
     /* ──── Inner Card class ──── */

@@ -184,11 +184,19 @@ public class MainMenu extends JFrame {
         descLabel.setForeground(TEXT_DIM);
         descLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
+        int best = player.getGameHighScore(name);
+        JLabel bestLabel = new JLabel(best > 0 ? "Best Score: " + best : "No record yet");
+        bestLabel.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        bestLabel.setForeground(best > 0 ? GOLD : TEXT_DIM);
+        bestLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
         card.add(iconLabel);
         card.add(Box.createVerticalStrut(8));
         card.add(nameLabel);
         card.add(Box.createVerticalStrut(4));
         card.add(descLabel);
+        card.add(Box.createVerticalStrut(10));
+        card.add(bestLabel);
 
         // Hover + click
         card.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -330,60 +338,141 @@ public class MainMenu extends JFrame {
         var allAchievements = mgr.getAllAchievements();
         Set<String> owned = mgr.getPlayerAchievements(player.getUsername());
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("Your Achievements (").append(owned.size()).append("/").append(allAchievements.size()).append(")\n\n");
+        JDialog dlg = new JDialog(this, "🏆 Achievements", true);
+        dlg.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+        dlg.setSize(640, 500);
+        dlg.setLocationRelativeTo(this);
 
+        JPanel root = new JPanel(new BorderLayout());
+        root.setBackground(BG);
+
+        JLabel head = new JLabel("Achievements  —  " + owned.size() + " / " + allAchievements.size() + " unlocked",
+            SwingConstants.CENTER);
+        head.setFont(new Font("Segoe UI", Font.BOLD, 17));
+        head.setForeground(ACCENT);
+        head.setBorder(BorderFactory.createEmptyBorder(16, 0, 8, 0));
+        root.add(head, BorderLayout.NORTH);
+
+        JPanel grid = new JPanel(new GridLayout(0, 2, 12, 12));
+        grid.setBackground(BG);
+        grid.setBorder(BorderFactory.createEmptyBorder(12, 18, 12, 18));
         for (var entry : allAchievements.values()) {
-            boolean has = owned.contains(entry.getId());
-            sb.append(has ? "✅ " : "🔒 ");
-            sb.append(entry.getName()).append(" — ").append(entry.getDescription());
-            if (!has) {
-                sb.append("  [+").append(entry.getRewardXp()).append(" XP, +").append(entry.getRewardCoins()).append(" 🪙]");
-            }
-            sb.append("\n");
+            grid.add(createAchievementCard(entry.getName(), entry.getDescription(),
+                owned.contains(entry.getId()), entry.getRewardXp(), entry.getRewardCoins()));
         }
 
-        JTextArea ta = new JTextArea(sb.toString());
-        ta.setFont(new Font("Consolas", Font.PLAIN, 12));
-        ta.setEditable(false);
-        ta.setBackground(PANEL_BG);
-        ta.setForeground(TEXT);
-        ta.setCaretColor(TEXT);
+        JScrollPane sp = new JScrollPane(grid);
+        sp.getViewport().setBackground(BG);
+        sp.setBorder(null);
+        root.add(sp, BorderLayout.CENTER);
+        dlg.setContentPane(root);
+        dlg.setVisible(true);
+    }
 
-        JOptionPane.showMessageDialog(this, new JScrollPane(ta),
-            "🏆 Achievements", JOptionPane.PLAIN_MESSAGE);
+    private JPanel createAchievementCard(String name, String desc, boolean owned, int xp, int coins) {
+        JPanel card = new JPanel();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBackground(owned ? new Color(28, 55, 40) : CARD_BG);
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(owned ? GREEN : new Color(50, 50, 70), 1, true),
+            BorderFactory.createEmptyBorder(12, 14, 12, 14)));
+
+        JLabel title = new JLabel((owned ? "✅ " : "🔒 ") + name);
+        title.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        title.setForeground(owned ? GREEN : TEXT);
+        title.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.add(title);
+        card.add(Box.createVerticalStrut(5));
+        JLabel descLbl = new JLabel("<html><body style='width: 220px'>" + desc + "</body></html>");
+        descLbl.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        descLbl.setForeground(TEXT_DIM);
+        descLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.add(descLbl);
+        if (!owned) {
+            card.add(Box.createVerticalStrut(6));
+            JLabel reward = new JLabel("Reward: +" + xp + " XP  +" + coins + " 🪙");
+            reward.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            reward.setForeground(GOLD);
+            reward.setAlignmentX(Component.LEFT_ALIGNMENT);
+            card.add(reward);
+        }
+        return card;
     }
 
     /* ─────────────────── LEADERBOARD DIALOG ─────────────────── */
 
     private void showLeaderboard() {
         LeaderboardManager mgr = LeaderboardManager.getInstance();
+        int myRank = mgr.getPlayerGlobalRank(player.getUsername());
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("═══════════ GLOBAL LEADERBOARD ═══════════\n\n");
+        JDialog dlg = new JDialog(this, "📊 Leaderboard", true);
+        dlg.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+        dlg.setSize(540, 480);
+        dlg.setLocationRelativeTo(this);
+
+        JPanel root = new JPanel(new BorderLayout());
+        root.setBackground(BG);
+
+        JLabel head = new JLabel("GLOBAL LEADERBOARD", SwingConstants.CENTER);
+        head.setFont(new Font("Segoe UI", Font.BOLD, 17));
+        head.setForeground(ACCENT);
+        head.setBorder(BorderFactory.createEmptyBorder(16, 0, 8, 0));
+        root.add(head, BorderLayout.NORTH);
+
+        JPanel list = new JPanel();
+        list.setLayout(new BoxLayout(list, BoxLayout.Y_AXIS));
+        list.setBackground(BG);
+        list.setBorder(BorderFactory.createEmptyBorder(8, 20, 8, 20));
 
         var global = mgr.getGlobalLeaderboard(10);
         if (global.isEmpty()) {
-            sb.append("  No scores yet — be the first!\n");
+            JLabel empty = new JLabel("No scores yet — be the first!", SwingConstants.CENTER);
+            empty.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            empty.setForeground(TEXT_DIM);
+            empty.setAlignmentX(Component.CENTER_ALIGNMENT);
+            list.add(empty);
         } else {
             for (var entry : global) {
-                sb.append(String.format("  #%-3d %-25s %d pts\n",
-                    entry.getRank(), entry.getUsername(), entry.getScore()));
+                boolean me = entry.getUsername().equals(player.getUsername());
+                JPanel row = new JPanel(new BorderLayout());
+                row.setOpaque(me);
+                row.setBackground(me ? new Color(45, 60, 105) : CARD_BG);
+                row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+                row.setAlignmentX(Component.LEFT_ALIGNMENT);
+                row.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
+
+                String medal = switch (entry.getRank()) {
+                    case 1 -> "🥇";
+                    case 2 -> "🥈";
+                    case 3 -> "🥉";
+                    default -> "#" + entry.getRank();
+                };
+                JLabel r = new JLabel((me ? "⭐ " : "") + medal + "  " + entry.getUsername());
+                r.setFont(new Font("Segoe UI", Font.BOLD, 13));
+                r.setForeground(me ? GOLD : TEXT);
+                JLabel s = new JLabel(entry.getScore() + " pts");
+                s.setFont(new Font("Consolas", Font.BOLD, 13));
+                s.setForeground(me ? GOLD : ACCENT);
+                row.add(r, BorderLayout.WEST);
+                row.add(s, BorderLayout.EAST);
+                list.add(row);
+                list.add(Box.createVerticalStrut(4));
             }
         }
 
-        sb.append("\n═══════════ YOUR STATS ═══════════\n");
-        int rank = mgr.getPlayerGlobalRank(player.getUsername());
-        sb.append("  Global Rank: ").append(rank > 0 ? "#" + rank : "Unranked").append("\n");
+        JScrollPane sp = new JScrollPane(list);
+        sp.getViewport().setBackground(BG);
+        sp.setBorder(null);
+        root.add(sp, BorderLayout.CENTER);
 
-        JTextArea ta = new JTextArea(sb.toString());
-        ta.setFont(new Font("Consolas", Font.PLAIN, 12));
-        ta.setEditable(false);
-        ta.setBackground(PANEL_BG);
-        ta.setForeground(TEXT);
-        ta.setCaretColor(TEXT);
+        JLabel footer = new JLabel("Your Global Rank: " + (myRank > 0 ? "#" + myRank : "Unranked"),
+            SwingConstants.CENTER);
+        footer.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        footer.setForeground(GOLD);
+        footer.setBorder(BorderFactory.createEmptyBorder(10, 0, 14, 0));
+        root.add(footer, BorderLayout.SOUTH);
 
-        JOptionPane.showMessageDialog(this, new JScrollPane(ta),
-            "📊 Leaderboard", JOptionPane.PLAIN_MESSAGE);
+        dlg.setContentPane(root);
+        dlg.setVisible(true);
     }
 }

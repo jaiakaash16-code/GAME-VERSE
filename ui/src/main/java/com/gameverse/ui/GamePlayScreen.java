@@ -17,6 +17,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Fully interactive game screen — all 6 games playable with keyboard and mouse.
@@ -38,6 +40,9 @@ public class GamePlayScreen extends JFrame {
     private Runnable onGameFinished;
     private boolean gameEnding = false;
     private Difficulty currentDifficulty = Difficulty.MEDIUM;
+    private int hoverRow = -1, hoverCol = -1;
+    private boolean upHeld, downHeld; // held-key state for continuous Pong paddle movement
+    private final Map<Difficulty, JButton> diffButtons = new HashMap<>();
 
     // Colors
     private static final Color BG = new Color(18, 18, 28);
@@ -63,6 +68,22 @@ public class GamePlayScreen extends JFrame {
         setupInput();
         startGameLoop();
         setVisible(true);
+        // The window is not displayable yet inside setupInput(), so a focus request
+        // made there is silently ignored. Grab keyboard focus once the frame is
+        // actually shown, and re-grab it whenever the window regains activation
+        // (after Alt-Tab, dialogs, etc.) so arrow keys always reach the board.
+        SwingUtilities.invokeLater(() -> boardPanel.requestFocusInWindow());
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowActivated(WindowEvent e) {
+                if (boardPanel != null) boardPanel.requestFocusInWindow();
+            }
+            @Override
+            public void windowDeactivated(WindowEvent e) {
+                upHeld = false;
+                downHeld = false;
+            }
+        });
     }
 
     /* ═══════════════ INIT ═══════════════ */
@@ -159,12 +180,29 @@ public class GamePlayScreen extends JFrame {
             BorderFactory.createLineBorder(new Color(60, 60, 80)),
             BorderFactory.createEmptyBorder(4, 10, 4, 10)));
         
+        btn.addActionListener(e -> {
+            if (currentDifficulty == diff) return;
+            currentDifficulty = diff;
+            // Refresh the button highlights so the selection is visible.
+            updateDiffButtons();
+            restartGame();
+        });
+        
+        diffButtons.put(diff, btn);
+        applyDiffStyle(btn, diff);
+        return btn;
+    }
+
+    private void updateDiffButtons() {
+        diffButtons.forEach((diff, btn) -> applyDiffStyle(btn, diff));
+    }
+
+    private void applyDiffStyle(JButton btn, Difficulty diff) {
         Color bgColor = switch (diff) {
             case EASY -> EASY_COLOR;
             case MEDIUM -> MEDIUM_COLOR;
             case HARD -> HARD_COLOR;
         };
-        
         if (currentDifficulty == diff) {
             btn.setBackground(bgColor);
             btn.setForeground(Color.WHITE);
@@ -172,14 +210,7 @@ public class GamePlayScreen extends JFrame {
             btn.setBackground(CARD_BG);
             btn.setForeground(TEXT_DIM);
         }
-        
-        btn.addActionListener(e -> {
-            if (currentDifficulty == diff) return;
-            currentDifficulty = diff;
-            restartGame();
-        });
-        
-        return btn;
+        btn.repaint();
     }
 
     private JPanel createControls() {
@@ -218,8 +249,8 @@ public class GamePlayScreen extends JFrame {
     private String getHint() {
         String diffStr = " [" + currentDifficulty.getDisplayName() + "]";
         return switch (gameName) {
-            case "Snake" -> "\uD83C\uDFAE Arrow keys \u2190\u2191\u2192\u2193 to move | Eat food to grow" + diffStr;
-            case "Pong" -> "\uD83C\uDFAE \u2191/\u2193 to move paddle | First to 5 wins" + diffStr;
+            case "Snake" -> "\uD83C\uDFAE Arrow keys / WASD \u2190\u2191\u2192\u2193 to move | Eat food to grow" + diffStr;
+            case "Pong" -> "\uD83C\uDFAE \u2191/\u2193 or W/S to move paddle | First to 5 wins" + diffStr;
             case "Tic-Tac-Toe" -> "\uD83C\uDFAE Click cell to place X | Beat the AI!" + diffStr;
             case "Memory Game" -> "\uD83C\uDFAE Click cards to flip | Beat the AI opponent!" + diffStr;
             case "Mini Racing" -> "\uD83C\uDFAE \u2191 accelerate, \u2193 brake | Race to the finish!" + diffStr;
@@ -234,13 +265,59 @@ public class GamePlayScreen extends JFrame {
         boardPanel.setFocusable(true);
         boardPanel.addKeyListener(new KeyAdapter() {
             @Override
-            public void keyPressed(KeyEvent e) { handleKey(e.getKeyCode()); }
+            public void keyPressed(KeyEvent e) {
+                int code = e.getKeyCode();
+                if (code == KeyEvent.VK_R) restartGame();
+                else if (code == KeyEvent.VK_ESCAPE) endGame(true);
+                else if ("Pong".equals(gameName)
+                        && (code == KeyEvent.VK_UP || code == KeyEvent.VK_DOWN
+                            || code == KeyEvent.VK_W || code == KeyEvent.VK_S)) {
+                    // Track held state — the game loop moves the paddle each frame
+                    // while a key is down, so holding \u2191/\u2193 glides smoothly.
+                    if (code == KeyEvent.VK_UP || code == KeyEvent.VK_W) upHeld = true;
+                    else downHeld = true;
+                } else {
+                    handleKey(code);
+                }
+            }
+            @Override
+            public void keyReleased(KeyEvent e) {
+                int code = e.getKeyCode();
+                if (code == KeyEvent.VK_UP || code == KeyEvent.VK_W) upHeld = false;
+                else if (code == KeyEvent.VK_DOWN || code == KeyEvent.VK_S) downHeld = false;
+            }
         });
         boardPanel.addMouseListener(new MouseAdapter() {
             @Override
+            public void mousePressed(MouseEvent e) { boardPanel.requestFocusInWindow(); }
+            @Override
             public void mouseClicked(MouseEvent e) { handleClick(e.getX(), e.getY()); }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                if (hoverRow != -1 || hoverCol != -1) { hoverRow = -1; hoverCol = -1; boardPanel.repaint(); }
+            }
+        });
+        boardPanel.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) { updateHover(e.getX(), e.getY()); }
         });
         boardPanel.requestFocusInWindow();
+    }
+
+    /** Track the cell under the mouse for hover highlights (Tic-Tac-Toe). */
+    private void updateHover(int mx, int my) {
+        if (!"Tic-Tac-Toe".equals(gameName)) {
+            if (hoverRow != -1 || hoverCol != -1) { hoverRow = -1; hoverCol = -1; boardPanel.repaint(); }
+            return;
+        }
+        int bs = Math.min(boardPanel.getWidth(), boardPanel.getHeight()) - 80;
+        int cs = bs / 3;
+        int sx = (boardPanel.getWidth() - bs) / 2;
+        int sy = (boardPanel.getHeight() - bs) / 2;
+        int col = (mx - sx) / cs, row = (my - sy) / cs;
+        boolean in = row >= 0 && row < 3 && col >= 0 && col < 3;
+        int nr = in ? row : -1, nc = in ? col : -1;
+        if (nr != hoverRow || nc != hoverCol) { hoverRow = nr; hoverCol = nc; boardPanel.repaint(); }
     }
 
     private void handleKey(int code) {
@@ -249,22 +326,19 @@ public class GamePlayScreen extends JFrame {
             switch (gameName) {
                 case "Snake" -> {
                     String d = switch (code) {
-                        case KeyEvent.VK_UP -> "up";
-                        case KeyEvent.VK_DOWN -> "down";
-                        case KeyEvent.VK_LEFT -> "left";
-                        case KeyEvent.VK_RIGHT -> "right";
+                        case KeyEvent.VK_UP, KeyEvent.VK_W -> "up";
+                        case KeyEvent.VK_DOWN, KeyEvent.VK_S -> "down";
+                        case KeyEvent.VK_LEFT, KeyEvent.VK_A -> "left";
+                        case KeyEvent.VK_RIGHT, KeyEvent.VK_D -> "right";
                         default -> null;
                     };
                     if (d != null) game.getClass().getMethod("moveSnake", String.class).invoke(game, d);
                 }
-                case "Pong" -> {
-                    if (code == KeyEvent.VK_UP) game.getClass().getMethod("movePaddleUp").invoke(game);
-                    else if (code == KeyEvent.VK_DOWN) game.getClass().getMethod("movePaddleDown").invoke(game);
-                }
+                // Pong movement is handled by the game loop while \u2191/\u2193/W/S are held.
                 case "Mini Racing" -> {
-                    if (code == KeyEvent.VK_UP || code == KeyEvent.VK_SPACE)
+                    if (code == KeyEvent.VK_UP || code == KeyEvent.VK_W || code == KeyEvent.VK_SPACE)
                         game.getClass().getMethod("accelerate").invoke(game);
-                    else if (code == KeyEvent.VK_DOWN)
+                    else if (code == KeyEvent.VK_DOWN || code == KeyEvent.VK_S)
                         game.getClass().getMethod("decelerate").invoke(game);
                 }
             }
@@ -334,6 +408,13 @@ public class GamePlayScreen extends JFrame {
             if (!game.isRunning() && game.getResult() != null) { endGame(false); return; }
             timerLabel.setText("Time: " + (System.currentTimeMillis() - startTime) / 1000 + "s");
             scoreLabel.setText("Score: " + game.getScore());
+            // Continuous Pong paddle movement while a direction key is held.
+            if ("Pong".equals(gameName) && game.isRunning() && (upHeld || downHeld)) {
+                try {
+                    if (upHeld) game.getClass().getMethod("movePaddleUp").invoke(game);
+                    if (downHeld) game.getClass().getMethod("movePaddleDown").invoke(game);
+                } catch (Exception ignored) {}
+            }
             game.update(ms / 1000f);
             boardPanel.repaint();
             if (game.getResult() != null) endGame(false);
@@ -404,6 +485,14 @@ public class GamePlayScreen extends JFrame {
                     // Cell background
                     g2.setColor(new Color(35, 35, 55));
                     g2.fillRoundRect(x + 5, y + 5, cs - 10, cs - 10, 8, 8);
+
+                    // Hover highlight on empty cell
+                    if (r == hoverRow && c == hoverCol && board[r][c] == ' ') {
+                        g2.setColor(new Color(100, 150, 255, 45));
+                        g2.fillRoundRect(x + 5, y + 5, cs - 10, cs - 10, 8, 8);
+                        g2.setColor(new Color(100, 150, 255, 120));
+                        g2.drawRoundRect(x + 5, y + 5, cs - 10, cs - 10, 8, 8);
+                    }
 
                     char ch = board[r][c];
                     if (ch != ' ') {
@@ -559,7 +648,7 @@ public class GamePlayScreen extends JFrame {
 
             g2.setColor(TEXT_DIM);
             g2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-            g2.drawString("You (blue left) vs AI (red right)  |  \u2191\u2193 to move  |  [" + currentDifficulty.getDisplayName() + "]", 15, h - 10);
+            g2.drawString("You (blue left) vs AI (red right)  |  \u2191\u2193 / W/S to move  |  [" + currentDifficulty.getDisplayName() + "]", 15, h - 10);
         } catch (Exception e) { drawCenter(g2, "Pong — \u2191\u2193 to move", w, h); }
     }
 
@@ -579,27 +668,20 @@ public class GamePlayScreen extends JFrame {
                 boolean matched = mg.isCardMatched(r, c);
                 int val = mg.getCardValue(r, c);
                 String sym = MemoryGame.getSymbolForValue(val);
+                Color fruitColor = MemoryGame.getColorForValue(val);
 
                 if (matched) {
                     g2.setColor(new Color(30, 70, 30));
                     g2.fillRoundRect(x, y, cw, ch, 10, 10);
                     g2.setColor(new Color(50, 100, 50));
                     g2.drawRoundRect(x, y, cw, ch, 10, 10);
-                    g2.setFont(new Font("Segoe UI Emoji", Font.PLAIN, cw / 2));
-                    FontMetrics fm = g2.getFontMetrics();
-                    g2.setColor(GREEN);
-                    g2.drawString(sym, x + (cw - fm.stringWidth(sym)) / 2,
-                        y + (ch + fm.getAscent() - fm.getDescent()) / 2);
+                    drawFruit(g2, sym, fruitColor, x, y, cw, ch, true);
                 } else if (flipped) {
                     g2.setColor(new Color(50, 50, 80));
                     g2.fillRoundRect(x, y, cw, ch, 10, 10);
                     g2.setColor(ACCENT);
                     g2.drawRoundRect(x, y, cw, ch, 10, 10);
-                    g2.setFont(new Font("Segoe UI Emoji", Font.PLAIN, cw / 2));
-                    FontMetrics fm = g2.getFontMetrics();
-                    g2.setColor(Color.WHITE);
-                    g2.drawString(sym, x + (cw - fm.stringWidth(sym)) / 2,
-                        y + (ch + fm.getAscent() - fm.getDescent()) / 2);
+                    drawFruit(g2, sym, fruitColor, x, y, cw, ch, false);
                 } else {
                     g2.setColor(CARD_BG);
                     g2.fillRoundRect(x, y, cw, ch, 10, 10);
@@ -626,6 +708,39 @@ public class GamePlayScreen extends JFrame {
         g2.setColor(TEXT_DIM);
         g2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         g2.drawString("You: " + mg.getMatchesFound() + " | AI: " + mg.getAiMatchesFound() + "/" + mg.getTotalPairs() + "  |  Attempts: " + mg.getAttempts() + "  |  [" + currentDifficulty.getDisplayName() + "]", 15, h - 10);
+    }
+
+    /**
+     * Draw a memory-game fruit in its own color: a soft colored glow behind the
+     * card, a drop shadow, the tinted emoji glyph, and a green \u2713 badge when
+     * the pair is matched.
+     */
+    private void drawFruit(Graphics2D g2, String sym, Color color, int x, int y, int cw, int ch, boolean matched) {
+        int size = cw / 2;
+
+        // Soft glow in the fruit's color
+        g2.setColor(new Color(color.getRed(), color.getGreen(), color.getBlue(), 45));
+        g2.fillOval(x + cw / 2 - size / 2 - 6, y + ch / 2 - size / 2 - 6, size + 12, size + 12);
+
+        // Drop shadow
+        g2.setFont(new Font("Segoe UI Emoji", Font.PLAIN, size));
+        FontMetrics fm = g2.getFontMetrics();
+        g2.setColor(new Color(0, 0, 0, 90));
+        g2.drawString(sym, x + (cw - fm.stringWidth(sym)) / 2 + 2,
+            y + (ch + fm.getAscent() - fm.getDescent()) / 2 + 2);
+
+        // Fruit glyph tinted with its own color
+        g2.setColor(color);
+        g2.drawString(sym, x + (cw - fm.stringWidth(sym)) / 2,
+            y + (ch + fm.getAscent() - fm.getDescent()) / 2);
+
+        // Match badge
+        if (matched) {
+            g2.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            FontMetrics cfm = g2.getFontMetrics();
+            g2.setColor(GREEN);
+            g2.drawString("\u2713", x + cw - cfm.stringWidth("\u2713") - 4, y + cfm.getAscent());
+        }
     }
 
     /* ──── RACING ──── */
@@ -830,26 +945,120 @@ public class GamePlayScreen extends JFrame {
         if ("Chess".equals(gameName) && won) am.grantAchievement(player.getUsername(), "CHESS_BEGINNER");
         if (player.getWins() >= 10 && player.getAllGameWins().size() >= 2) am.grantAchievement(player.getUsername(), "MULTI_GAME_CHAMPION");
 
-        StringBuilder msg = new StringBuilder();
-        msg.append("\u2550\u2550\u2550\u2550\u2550 ").append(gameName).append(" \u2550\u2550\u2550\u2550\u2550\n\n");
-        msg.append("Difficulty: ").append(currentDifficulty.getDisplayName()).append("\n\n");
-        msg.append(switch (result.getStatus()) { case WON -> "\uD83C\uDFC6 YOU WIN!"; case LOST -> "\uD83D\uDC80 Game Over"; case DRAWN -> "\uD83E\uDD1D Draw"; default -> "\u2705 Done"; }).append("\n\n");
-        msg.append("Score: ").append(result.getScore()).append("  |  Time: ").append(result.getDuration() / 1000).append("s\n");
-        msg.append("XP: +").append(xp);
-        if (lvlUp) msg.append("  \uD83C\uDF89 LEVEL UP \u2192 Lv.").append(player.getLevel());
-        if (hs) msg.append("  \u2B50 HIGH SCORE!");
-
-        JTextArea ta = new JTextArea(msg.toString());
-        ta.setFont(new Font("Consolas", Font.PLAIN, 13));
-        ta.setEditable(false);
-        ta.setBackground(PANEL_BG);
-        ta.setForeground(TEXT);
-
-        String[] opts = {"Play Again", "Back to Menu"};
-        int c = JOptionPane.showOptionDialog(this, new JScrollPane(ta), "Result",
-            JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, opts, opts[0]);
+        int c = showResultDialog(result, xp, lvlUp, hs);
         dispose();
         if (c == 0) new GamePlayScreen(player, gameName, onGameFinished);
         else if (onGameFinished != null) onGameFinished.run();
+    }
+
+    /* ─────────── RESULT DIALOG ─────────── */
+
+    /** Polished end-of-game dialog. Returns 0 = play again, 1 = back to menu. */
+    private int showResultDialog(GameResult result, int xp, boolean lvlUp, boolean hs) {
+        JDialog dlg = new JDialog(this, "Result", true);
+        dlg.setUndecorated(true);
+        dlg.setModal(true);
+
+        JPanel root = new JPanel(new BorderLayout());
+        root.setBackground(PANEL_BG);
+        root.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(70, 70, 100)),
+            BorderFactory.createEmptyBorder(26, 36, 22, 36)));
+
+        JPanel content = new JPanel();
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setOpaque(false);
+
+        String statusEmoji = switch (result.getStatus()) {
+            case WON -> "\uD83C\uDFC6";
+            case LOST -> "\uD83D\uDC80";
+            case DRAWN -> "\uD83E\uDD1D";
+            default -> "\u2705";
+        };
+        String statusText = switch (result.getStatus()) {
+            case WON -> "YOU WIN!";
+            case LOST -> "GAME OVER";
+            case DRAWN -> "IT'S A DRAW";
+            default -> "DONE";
+        };
+        Color statusColor = switch (result.getStatus()) {
+            case WON -> GOLD;
+            case LOST -> RED;
+            case DRAWN -> ACCENT;
+            default -> GREEN;
+        };
+
+        JLabel emojiLbl = new JLabel(statusEmoji, SwingConstants.CENTER);
+        emojiLbl.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 54));
+        emojiLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
+        content.add(emojiLbl);
+
+        JLabel statusLbl = new JLabel(statusText, SwingConstants.CENTER);
+        statusLbl.setFont(new Font("Segoe UI", Font.BOLD, 26));
+        statusLbl.setForeground(statusColor);
+        statusLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
+        content.add(statusLbl);
+
+        content.add(Box.createVerticalStrut(18));
+        content.add(makeResultRow("Game", gameName));
+        content.add(makeResultRow("Difficulty", currentDifficulty.getDisplayName()));
+        content.add(makeResultRow("Score", String.valueOf(result.getScore())));
+        content.add(makeResultRow("Time", (result.getDuration() / 1000) + "s"));
+        content.add(makeResultRow("XP Gained", "+" + xp));
+
+        if (lvlUp) {
+            content.add(Box.createVerticalStrut(12));
+            JLabel lvl = new JLabel("\uD83C\uDF89 LEVEL UP \u2192 Lv." + player.getLevel(), SwingConstants.CENTER);
+            lvl.setFont(new Font("Segoe UI", Font.BOLD, 15));
+            lvl.setForeground(GOLD);
+            lvl.setAlignmentX(Component.CENTER_ALIGNMENT);
+            content.add(lvl);
+        }
+        if (hs) {
+            content.add(Box.createVerticalStrut(8));
+            JLabel hsb = new JLabel("\u2B50 NEW HIGH SCORE!", SwingConstants.CENTER);
+            hsb.setFont(new Font("Segoe UI", Font.BOLD, 14));
+            hsb.setForeground(GREEN);
+            hsb.setAlignmentX(Component.CENTER_ALIGNMENT);
+            content.add(hsb);
+        }
+
+        root.add(content, BorderLayout.CENTER);
+
+        JPanel btns = new JPanel(new FlowLayout(FlowLayout.CENTER, 14, 0));
+        btns.setOpaque(false);
+        btns.setBorder(BorderFactory.createEmptyBorder(22, 0, 0, 0));
+
+        final int[] choice = {1};
+        JButton again = makeBtn("\u25B6 Play Again", ACCENT);
+        again.addActionListener(e -> { choice[0] = 0; dlg.dispose(); });
+        JButton menu = makeBtn("\uD83C\uDFE0 Back to Menu", CARD_BG);
+        menu.setForeground(TEXT);
+        menu.addActionListener(e -> { choice[0] = 1; dlg.dispose(); });
+        btns.add(again);
+        btns.add(menu);
+
+        root.add(btns, BorderLayout.SOUTH);
+        dlg.setContentPane(root);
+        dlg.pack();
+        dlg.setLocationRelativeTo(this);
+        dlg.setVisible(true);
+        return choice[0];
+    }
+
+    private JPanel makeResultRow(String label, String value) {
+        JPanel row = new JPanel(new BorderLayout(16, 0));
+        row.setOpaque(false);
+        row.setMaximumSize(new Dimension(320, 26));
+        row.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel l = new JLabel(label);
+        l.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        l.setForeground(TEXT_DIM);
+        JLabel v = new JLabel(value);
+        v.setFont(new Font("Consolas", Font.BOLD, 13));
+        v.setForeground(TEXT);
+        row.add(l, BorderLayout.WEST);
+        row.add(v, BorderLayout.EAST);
+        return row;
     }
 }
