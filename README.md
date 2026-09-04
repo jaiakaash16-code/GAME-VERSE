@@ -21,6 +21,7 @@ GameVerse currently hosts the following games:
 - ❌ **Tic-Tac-Toe** - Simple turn-based game with AI
 - 🧠 **Memory Game** - Classic memory/matching game
 - 🏎️ **Mini Racing** - Simple racing game
+- 👁️ **DON'T LOOK** - Stealth horror: it only moves when you're not looking (launches in your browser from the hub)
 
 More games can be added in the future using the modular game API.
 

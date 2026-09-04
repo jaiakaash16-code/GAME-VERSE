@@ -44,17 +44,19 @@ public class MainMenu extends JFrame {
         {"Pong", "🏓", "Paddle ball with AI"},
         {"Tic-Tac-Toe", "❌", "Turn-based with smart AI"},
         {"Memory Game", "🧠", "Match the hidden pairs"},
-        {"Mini Racing", "🏎️", "Race to the finish line"}
+        {"Mini Racing", "🏎️", "Race to the finish line"},
+        {"DON'T LOOK", "👁️", "It only moves when you're not looking"}
     };
 
     // One accent per game card
     private static final Color[] GAME_ACCENTS = {
-        new Color(130, 165, 255), // Chess  — blue
-        new Color(95, 215, 145),  // Snake  — green
-        new Color(95, 200, 225),  // Pong   — cyan
-        new Color(255, 185, 95),  // TTT    — orange
-        new Color(200, 150, 255), // Memory — purple
-        new Color(255, 125, 120)  // Racing — red
+        new Color(130, 165, 255), // Chess      — blue
+        new Color(95, 215, 145),  // Snake      — green
+        new Color(95, 200, 225),  // Pong       — cyan
+        new Color(255, 185, 95),  // TTT        — orange
+        new Color(200, 150, 255), // Memory     — purple
+        new Color(255, 125, 120), // Racing     — red
+        new Color(205, 205, 220)  // DON'T LOOK — ghost white
     };
 
     public interface MainMenuCallback {
@@ -378,6 +380,10 @@ public class MainMenu extends JFrame {
             }
             @Override
             public void mouseClicked(MouseEvent e) {
+                if ("DON'T LOOK".equals(name)) {
+                    DontLookLauncher.launch();
+                    return; // external web game — keep the hub open
+                }
                 dispose();
                 if (callback != null) callback.onPlayGame(name);
             }

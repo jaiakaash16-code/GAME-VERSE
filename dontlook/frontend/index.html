@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DON'T LOOK</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="960" height="640"></canvas>
+  <div id="vignette"></div>
+  <div id="hud">
+    <div id="room">…</div>
+    <div id="time">0.0s</div>
+    <div id="best"></div>
+    <div id="status">AWAITING YOUR MOVE</div>
+    <div id="hint">ESC — MENU</div>
+  </div>
+
+  <div id="menu" class="overlay">
+    <h1>DON'T LOOK</h1>
+    <p class="sub">It only moves when you're not looking.</p>
+    <div class="menu-buttons">
+      <button id="playBtn">▶ &nbsp;PLAY</button>
+      <button id="levelsBtn">LEVELS</button>
+      <button id="menuSettingsBtn">SETTINGS</button>
+    </div>
+    <p class="tip">WASD move · Mouse aims your light · Esc menu<br>Reach the glowing door. Don't let it touch you.</p>
+  </div>
+
+  <div id="pause" class="overlay hidden">
+    <h2>PAUSED</h2>
+    <p class="sub">The hunt is frozen. It is waiting.</p>
+    <div class="menu-buttons">
+      <button id="resumeBtn">RESUME</button>
+      <button id="pauseSettingsBtn">SETTINGS</button>
+      <button id="pauseMenuBtn">GO TO MENU</button>
+    </div>
+  </div>
+
+  <div id="levels" class="overlay hidden">
+    <h2>LEVELS</h2>
+    <div id="levelList"></div>
+    <button id="backBtn">← BACK</button>
+  </div>
+
+  <div id="settings" class="overlay hidden">
+    <h2>SETTINGS</h2>
+    <div class="setting-row">
+      <span>Volume</span>
+      <input id="volSlider" type="range" min="0" max="100" value="80">
+      <span id="volVal">80%</span>
+    </div>
+    <button id="resetBtn">Reset progress</button>
+    <p id="resetNote" class="level-note hidden"></p>
+    <button id="settingsBackBtn">← BACK</button>
+  </div>
+
+  <div id="dead" class="overlay hidden">
+    <h1 class="red">IT GOT YOU</h1>
+    <p id="deadTime"></p>
+    <button id="retryBtn">Try Again (R)</button>
+    <button id="deadMenuBtn">GO TO MENU</button>
+  </div>
+
+  <div id="won" class="overlay hidden">
+    <h1 class="green">YOU ESCAPED</h1>
+    <p id="wonTime"></p>
+    <button id="nextBtn">Next Room (N)</button>
+    <button id="wonMenuBtn">GO TO MENU</button>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>

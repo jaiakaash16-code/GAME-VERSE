@@ -1,0 +1,9 @@
+java-server/out/
+java-server/server.log
+java-server/gameverse-server.log
+java-server/*.log.err
+java-server/best_time.json
+python-service/venv/
+python-service/gen.log
+__pycache__/
+*.pyc
