@@ -22,6 +22,7 @@ GameVerse currently hosts the following games:
 - 🧠 **Memory Game** - Classic memory/matching game
 - 🏎️ **Mini Racing** - Simple racing game
 - 👁️ **DON'T LOOK** - Stealth horror: it only moves when you're not looking (launches in your browser from the hub)
+- 📡 **UNKNOWN SIGNAL** - Radio-mystery: tune, decode Morse, and discover the signal is aware of you (launches in your browser from the hub)
 
 More games can be added in the future using the modular game API.
 

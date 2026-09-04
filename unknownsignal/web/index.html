@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UNKNOWN SIGNAL</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="crt">
+  <canvas id="snow"></canvas>
+  <div class="scanlines"></div>
+  <div class="vignette"></div>
+
+  <header class="hud">
+    <div class="brand">UNKNOWN SIGNAL</div>
+    <div class="hud-right">
+      <span id="levelTag" class="tag">STATION 7</span>
+      <button id="soundBtn" class="mini">SND ON</button>
+      <button id="homeBtn" class="mini">HOME</button>
+      <button id="helpBtn" class="mini">MORSE CHART</button>
+      <button id="resetBtn" class="mini danger">RESET</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel" id="spectrumPanel">
+      <div class="panel-title">SPECTRUM // WATERFALL</div>
+      <canvas id="waterfall"></canvas>
+      <canvas id="scope"></canvas>
+      <div class="meters">
+        <div class="meter">
+          <div class="meter-label">SIGNAL</div>
+          <div class="meter-bar"><div class="meter-fill" id="strengthFill"></div></div>
+        </div>
+        <div class="meter">
+          <div class="meter-label">STABILITY</div>
+          <div class="meter-bar"><div class="meter-fill" id="stableFill"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="radioPanel">
+      <div class="panel-title">TRANSMITTER / RECEIVER</div>
+      <div class="freq-readout"><span id="freqDisplay">100.0</span><span class="unit">MHz</span></div>
+      <div class="dial" id="dial" title="DRAG TO TUNE">
+        <div class="knob" id="knob"><div class="knob-notch"></div></div>
+      </div>
+      <div class="dial-hint">DRAG DIAL · ← → KEYS · ENTER FREQ</div>
+      <input id="freqInput" type="text" inputmode="decimal" placeholder="enter frequency e.g. 104.7" autocomplete="off">
+      <div class="control-row">
+        <label for="bwSlider">FILTER</label>
+        <button id="bwMinus" class="step-btn">−</button>
+        <input type="range" id="bwSlider" min="0.5" max="6" step="0.1" value="3">
+        <button id="bwPlus" class="step-btn">+</button>
+        <span id="bwValue">3.0</span>
+      </div>
+      <button id="autoFilterBtn" class="big auto-filter" hidden>NARROW FILTER TO 1.0</button>
+      <div class="control-row" id="antennaRow" hidden>
+        <label>ANTENNA</label>
+        <div class="compass" id="compass" title="DRAG TO ROTATE ANTENNA">
+          <div class="needle" id="needle"></div>
+        </div>
+        <button id="bearingBtn" class="big">TAKE BEARING</button>
+      </div>
+      <button id="mapBtn" class="big" hidden>OPEN MAP</button>
+    </section>
+
+    <section class="panel" id="decodePanel">
+      <div class="panel-title">DECODE</div>
+      <div class="lock-lamp" id="lockLamp">&mdash;</div>
+      <div class="morse-out" id="morseOut">· &nbsp;· &nbsp;·</div>
+      <button id="playBtn" disabled>PLAY AUDIO</button>
+      <div class="input-row">
+        <input id="decodeInput" type="text" placeholder="type what you hear" disabled autocomplete="off">
+        <button id="decodeBtn" disabled>DECODE</button>
+      </div>
+      <div id="decodeFeedback" class="feedback"></div>
+      <div id="choiceArea"></div>
+      <button id="completeLevelBtn" class="big complete" hidden>COMPLETE LEVEL</button>
+    </section>
+
+    <section class="panel" id="logPanel">
+      <div class="panel-title">OPERATOR LOG</div>
+      <div id="logBody"></div>
+    </section>
+  </main>
+
+  <div id="mapWrap" hidden>
+    <div class="panel-title">TRIANGULATION MAP — CLICK TO MARK THE SOURCE</div>
+    <canvas id="mapCanvas"></canvas>
+    <div id="mapHint" class="feedback"></div>
+    <button id="mapClose">CLOSE</button>
+  </div>
+
+  <div id="homeScreen" class="home-screen" hidden>
+    <div class="home-box">
+      <div class="home-title">UNKNOWN SIGNAL</div>
+      <div class="home-sub">LISTENING STATION 7 · NIGHT SHIFT</div>
+      <div class="home-status" id="homeStatus"></div>
+      <div class="home-text">YOU ARE THE ONLY OPERATOR ON FREQUENCY TONIGHT.<br>THE LOG SAYS NOTHING. THE AIR SAYS OTHERWISE.</div>
+      <div class="home-menu">
+        <button id="homePower" class="ov-btn">POWER ON</button>
+        <button id="homeChart" class="home-item">MORSE CHART</button>
+        <button id="homeSound" class="home-item">SOUND: ON</button>
+        <button id="homeReset" class="home-item danger">RESET SAVE</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="overlay"></div>
+
+  <div id="helpModal" hidden>
+    <div class="help-box">
+      <div class="panel-title">MORSE CHART</div>
+      <div id="morseChart" class="morse-chart"></div>
+      <div class="help-text">
+        <p>· LISTEN TO THE SIGNAL OR READ ITS PATTERN IN THE DECODE PANEL.</p>
+        <p>· LETTERS ARE SEPARATED BY SPACES · WORDS BY " / ".</p>
+        <p>· TYPE THE MESSAGE AND PRESS DECODE.</p>
+      </div>
+      <button id="helpClose">CLOSE</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/fx.js"></script>
+<script src="js/spectrum.js"></script>
+<script src="js/morse.js"></script>
+<script src="js/radio.js"></script>
+<script src="js/map.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

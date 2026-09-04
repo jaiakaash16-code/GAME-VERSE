@@ -1,0 +1,6 @@
+out/
+save.json
+*.class
+sources.txt
+server.log
+gameverse-server.log*

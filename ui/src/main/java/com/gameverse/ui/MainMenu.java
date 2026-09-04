@@ -45,7 +45,8 @@ public class MainMenu extends JFrame {
         {"Tic-Tac-Toe", "❌", "Turn-based with smart AI"},
         {"Memory Game", "🧠", "Match the hidden pairs"},
         {"Mini Racing", "🏎️", "Race to the finish line"},
-        {"DON'T LOOK", "👁️", "It only moves when you're not looking"}
+        {"DON'T LOOK", "👁️", "It only moves when you're not looking"},
+        {"UNKNOWN SIGNAL", "📡", "A radio-mystery — it starts answering back"}
     };
 
     // One accent per game card
@@ -56,7 +57,8 @@ public class MainMenu extends JFrame {
         new Color(255, 185, 95),  // TTT        — orange
         new Color(200, 150, 255), // Memory     — purple
         new Color(255, 125, 120), // Racing     — red
-        new Color(205, 205, 220)  // DON'T LOOK — ghost white
+        new Color(205, 205, 220), // DON'T LOOK — ghost white
+        new Color(255, 110, 140)  // UNKNOWN SIGNAL — signal red
     };
 
     public interface MainMenuCallback {
@@ -382,6 +384,10 @@ public class MainMenu extends JFrame {
             public void mouseClicked(MouseEvent e) {
                 if ("DON'T LOOK".equals(name)) {
                     DontLookLauncher.launch();
+                    return; // external web game — keep the hub open
+                }
+                if ("UNKNOWN SIGNAL".equals(name)) {
+                    UnknownSignalLauncher.launch();
                     return; // external web game — keep the hub open
                 }
                 dispose();
