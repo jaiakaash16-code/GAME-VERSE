@@ -1,0 +1,6 @@
+target/
+*.jar
+*.class
+apache-maven-3.9.6/
+*.log
+save.json
