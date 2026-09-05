@@ -46,7 +46,8 @@ public class MainMenu extends JFrame {
         {"Memory Game", "🧠", "Match the hidden pairs"},
         {"Mini Racing", "🏎️", "Race to the finish line"},
         {"DON'T LOOK", "👁️", "It only moves when you're not looking"},
-        {"UNKNOWN SIGNAL", "📡", "A radio-mystery — it starts answering back"}
+        {"UNKNOWN SIGNAL", "📡", "A radio-mystery — it starts answering back"},
+        {"Mirror World", "🪞", "Flip between worlds to solve the puzzle"}
     };
 
     // One accent per game card
@@ -58,7 +59,8 @@ public class MainMenu extends JFrame {
         new Color(200, 150, 255), // Memory     — purple
         new Color(255, 125, 120), // Racing     — red
         new Color(205, 205, 220), // DON'T LOOK — ghost white
-        new Color(255, 110, 140)  // UNKNOWN SIGNAL — signal red
+        new Color(255, 110, 140), // UNKNOWN SIGNAL — signal red
+        new Color(150, 220, 255)  // Mirror World — mirror cyan
     };
 
     public interface MainMenuCallback {
@@ -265,7 +267,7 @@ public class MainMenu extends JFrame {
     /* ═══════════════════ GAMES GRID ═══════════════════ */
 
     private JPanel createGamesPanel() {
-        JPanel panel = new JPanel(new GridLayout(3, 2, 14, 14));
+        JPanel panel = new JPanel(new GridLayout(3, 3, 14, 14));
         panel.setOpaque(false);
         for (int i = 0; i < GAMES.length; i++) {
             panel.add(createGameCard(i));
@@ -388,6 +390,10 @@ public class MainMenu extends JFrame {
                 }
                 if ("UNKNOWN SIGNAL".equals(name)) {
                     UnknownSignalLauncher.launch();
+                    return; // external web game — keep the hub open
+                }
+                if ("Mirror World".equals(name)) {
+                    MirrorWorldLauncher.launch();
                     return; // external web game — keep the hub open
                 }
                 dispose();

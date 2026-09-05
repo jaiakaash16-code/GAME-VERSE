@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MIRROR WORLD</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="bg-stars"></div>
+
+<main id="app">
+  <header id="topbar">
+    <div class="brand">
+      <span class="logo">◐</span>
+      <span class="title">MIRROR <em>WORLD</em></span>
+    </div>
+    <nav id="nav">
+      <button data-route="home" class="nav-btn">HOME</button>
+      <button data-route="play" class="nav-btn">PLAY</button>
+      <button data-route="levels" class="nav-btn">LEVELS</button>
+      <button data-route="how" class="nav-btn">HOW</button>
+      <button data-route="score" class="nav-btn">SCORE</button>
+    </nav>
+    <div class="player">
+      <label>ID:</label>
+      <input id="playerId" placeholder="player">
+    </div>
+  </header>
+
+  <section id="view-home" class="view">
+    <div class="hero">
+      <div class="hero-left">
+        <div class="hero-tag">A 2D PUZZLE-PLATFORMER</div>
+        <h1 class="hero-title">Two worlds.<br><span class="accent">One truth.</span></h1>
+        <p class="hero-sub">
+          Step between <b>Normal</b> and <b>Mirror</b>. Every button you press,
+          every door you open, every hazard you survive — <em>echoes across both worlds.</em>
+        </p>
+        <div class="hero-actions">
+          <button id="btnPlayNow" class="btn-primary">▶ PLAY NOW</button>
+          <button id="btnLevels" class="btn-secondary">SELECT LEVEL</button>
+          <button id="btnHow" class="btn-ghost">HOW TO PLAY</button>
+        </div>
+        <div class="hero-meta">
+          <div class="meta-item">
+            <span class="meta-num" id="statLevels">—</span>
+            <span class="meta-lbl">LEVELS</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-num" id="statRuns">—</span>
+            <span class="meta-lbl">RUNS LOGGED</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-num" id="statBest">—</span>
+            <span class="meta-lbl">BEST SCORE</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-right">
+        <div class="dual">
+          <div class="world-card world-a-card">
+            <div class="world-card-tag">WORLD A</div>
+            <div class="world-card-title">NORMAL</div>
+            <div class="world-card-dot" style="background:#4ec9ff"></div>
+          </div>
+          <div class="mirror-arrow">⇄</div>
+          <div class="world-card world-b-card">
+            <div class="world-card-tag">WORLD B</div>
+            <div class="world-card-title">MIRROR</div>
+            <div class="world-card-dot" style="background:#ff7ad9"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="home-section">
+      <h2>JUMP IN</h2>
+      <div class="quick-grid">
+        <button class="quick-card" data-route="play">
+          <div class="quick-icon">▶</div>
+          <div class="quick-title">Continue</div>
+          <div class="quick-sub">Resume your last level</div>
+        </button>
+        <button class="quick-card" data-route="levels">
+          <div class="quick-icon">◧</div>
+          <div class="quick-title">All Levels</div>
+          <div class="quick-sub">Pick any of 5 worlds</div>
+        </button>
+        <button class="quick-card" data-route="how">
+          <div class="quick-icon">?</div>
+          <div class="quick-title">How to Play</div>
+          <div class="quick-sub">Master the flip</div>
+        </button>
+        <button class="quick-card" data-route="score">
+          <div class="quick-icon">★</div>
+          <div class="quick-title">Leaderboard</div>
+          <div class="quick-sub">Top runners</div>
+        </button>
+      </div>
+    </div>
+
+    <div class="home-section">
+      <h2>WHY MIRROR WORLD?</h2>
+      <div class="feat-grid">
+        <div class="feat-card">
+          <div class="feat-icon" style="color:#4ec9ff">◐</div>
+          <h3>One mechanic, infinite depth</h3>
+          <p>Press <b>W / S</b> to flip worlds. That's it. Every puzzle is just: when do I flip?</p>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon" style="color:#ff7ad9">⇄</div>
+          <h3>Cross-world persistence</h3>
+          <p>Buttons stay pressed. Doors stay open. Your moves echo across worlds — even when you can't see them.</p>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon" style="color:#ffd66b">✦</div>
+          <h3>5 handcrafted levels</h3>
+          <p>From a gentle tutorial to <i>The Mirror Heart</i>. Each one introduces a new twist on the same idea.</p>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon" style="color:#9b8cff">⚡</div>
+          <h3>Score & compete</h3>
+          <p>Fastest time, fewest deaths, fewest flips = highest score. Submit to the global leaderboard.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="home-cta">
+      <h2>Ready to flip?</h2>
+      <div class="hero-actions">
+        <button id="btnPlayNow2" class="btn-primary">▶ START PLAYING</button>
+        <button id="btnSettings" class="btn-secondary">⚙ SETTINGS</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-play" class="view hidden">
+    <div id="hud">
+      <div class="hud-block">
+        <span class="hud-label">WORLD</span>
+        <span id="worldLabel" class="hud-value world-a">NORMAL</span>
+      </div>
+      <div class="hud-block">
+        <span class="hud-label">LEVEL</span>
+        <span id="levelLabel" class="hud-value">—</span>
+      </div>
+      <div class="hud-block">
+        <span class="hud-label">TIME</span>
+        <span id="timeLabel" class="hud-value">00:00</span>
+      </div>
+      <div class="hud-block">
+        <span class="hud-label">DEATHS</span>
+        <span id="deathLabel" class="hud-value">0</span>
+      </div>
+      <div class="hud-block">
+        <span class="hud-label">FLIPS</span>
+        <span id="flipLabel" class="hud-value">0</span>
+      </div>
+    </div>
+
+    <div id="game-wrap">
+      <canvas id="game" width="960" height="640"></canvas>
+      <div id="flip-flash"></div>
+      <div id="message" class="msg hidden"></div>
+    </div>
+
+    <div id="hint-bar">
+      <span class="hint-icon">💡</span>
+      <span id="hintText">Loading…</span>
+    </div>
+
+    <div id="controls">
+      <button id="btnRestart">RESTART LEVEL</button>
+      <button id="btnMenu">LEVEL SELECT</button>
+    </div>
+  </section>
+
+  <section id="view-levels" class="view hidden">
+    <h2>SELECT A WORLD</h2>
+    <div id="levelsList" class="card-grid"></div>
+  </section>
+
+  <section id="view-how" class="view hidden">
+    <h2>HOW TO PLAY</h2>
+    <div class="how-grid">
+      <div class="how-card">
+        <h3>◐ Move</h3>
+        <p><b>A / D</b> or <b>← / →</b> — walk<br><b>Space</b> or <b>↑</b> — jump<br><b>W</b> — flip to Mirror world<br><b>S</b> or <b>↓</b> — flip back to Normal<br><b>R</b> — restart level</p>
+      </div>
+      <div class="how-card">
+        <h3>⬛ Rules</h3>
+        <p>There are <b>two worlds</b> stacked on top of each other. Anything you press, open, or move affects <em>both</em> worlds simultaneously.</p>
+      </div>
+      <div class="how-card">
+        <h3>🚪 Doors</h3>
+        <p>Each world has its own doors and buttons. A button pressed in World A still keeps the door open when you flip to World B.</p>
+      </div>
+      <div class="how-card">
+        <h3>☠ Hazards</h3>
+        <p>Spikes only exist in one world. Step into the wrong one and you'll be killed — but the other world stays safe.</p>
+      </div>
+      <div class="how-card">
+        <h3>✦ Goal</h3>
+        <p>Reach the glowing tile. Plan your flips. Every action echoes.</p>
+      </div>
+      <div class="how-card">
+        <h3>🏆 Score</h3>
+        <p>Faster times, fewer deaths, fewer flips = higher score. Submit to the leaderboard from the SCORE tab.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-score" class="view hidden">
+    <h2>LEADERBOARD</h2>
+    <table id="leaderboard">
+      <thead><tr><th>Rank</th><th>Player</th><th>Level</th><th>Score</th><th>Time</th><th>Deaths</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+</main>
+
+<div id="modal" class="modal hidden">
+  <div class="modal-card">
+    <h3 id="modalTitle"></h3>
+    <p id="modalBody"></p>
+    <div class="modal-actions">
+      <button id="modalOk">CONTINUE</button>
+      <button id="modalCancel" class="ghost">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
