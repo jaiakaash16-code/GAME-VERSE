@@ -253,7 +253,7 @@ public class GamePlayScreen extends JFrame {
             case "Snake" -> "\uD83C\uDFAE Arrow keys / WASD \u2190\u2191\u2192\u2193 to move | Eat food to grow" + diffStr;
             case "Pong" -> "\uD83C\uDFAE \u2191/\u2193 or W/S to move paddle | First to 5 wins" + diffStr;
             case "Tic-Tac-Toe" -> "\uD83C\uDFAE Click cell to place X | Beat the AI!" + diffStr;
-            case "Connect Four" -> "\uD83C\uDFAE Click a column to drop a disc | Connect four to win!" + diffStr;
+            case "Connect Four" -> "\uD83C\uDFAE Click any box to place your disc exactly there | Connect four to win!" + diffStr;
             case "Blackjack" -> "\uD83C\uDFAE Click left side to hit or right side to stand | Beat the dealer!" + diffStr;
             case "Memory Game" -> "\uD83C\uDFAE Click cards to flip | Beat the AI opponent!" + diffStr;
             case "Mini Racing" -> "\uD83C\uDFAE \u2191 accelerate, \u2193 brake | Race to the finish!" + diffStr;
@@ -309,17 +309,19 @@ public class GamePlayScreen extends JFrame {
 
     /** Track the cell under the mouse for hover highlights (Tic-Tac-Toe). */
     private void updateHover(int mx, int my) {
-        // Connect Four: highlight the whole column under the cursor.
+        // Connect Four: highlight the exact box under the cursor.
         if ("Connect Four".equals(gameName)) {
-            int newCol = -1;
+            int newRow = -1, newCol = -1;
             if (game != null && game.isRunning()) {
                 int bs = Math.min(boardPanel.getWidth(), boardPanel.getHeight()) - 80;
                 int cs = bs / 7;
                 int sx = (boardPanel.getWidth() - bs) / 2;
+                int sy = (boardPanel.getHeight() - bs) / 2;
                 int c = (mx - sx) / cs;
-                if (c >= 0 && c < 7) newCol = c;
+                int r = (my - sy) / cs;
+                if (c >= 0 && c < 7 && r >= 0 && r < 6) { newRow = r; newCol = c; }
             }
-            if (newCol != hoverCol) { hoverRow = -1; hoverCol = newCol; boardPanel.repaint(); }
+            if (newRow != hoverRow || newCol != hoverCol) { hoverRow = newRow; hoverCol = newCol; boardPanel.repaint(); }
             return;
         }
         if (!"Tic-Tac-Toe".equals(gameName)) {
@@ -386,19 +388,22 @@ public class GamePlayScreen extends JFrame {
                     int boardSize = Math.min(boardPanel.getWidth(), boardPanel.getHeight()) - 80;
                     int cell = boardSize / 7;
                     int sx = (boardPanel.getWidth() - boardSize) / 2;
+                    int sy = (boardPanel.getHeight() - boardSize) / 2;
                     int col = (mx - sx) / cell;
-                    if (col >= 0 && col < 7) {
-                        boolean ok = (boolean) game.getClass().getMethod("makeMove", int.class).invoke(game, col);
+                    int row = (my - sy) / cell;
+                    if (row >= 0 && row < 6 && col >= 0 && col < 7) {
+                        // Place the disc in the exact box the user clicked — no gravity.
+                        boolean ok = ((com.gameverse.games.connectfour.ConnectFourGame) game).makeMoveAt(row, col);
                         if (ok) {
                             game.update(0.1f);
-                            String msg = "\u27A1\uFE0F You dropped in column " + (col + 1) + " of 7.";
+                            String msg = "\u27A1\uFE0F You placed at row " + (row + 1) + ", column " + (col + 1) + ".";
                             if (game instanceof com.gameverse.games.connectfour.ConnectFourGame c4
                                     && c4.getLastAiColumn() >= 0) {
                                 msg += "  AI replied in column " + (c4.getLastAiColumn() + 1) + ".";
                             }
                             statusLabel.setText(msg);
                         } else {
-                            statusLabel.setText("\u26A0\uFE0F That column is full.");
+                            statusLabel.setText("\u26A0\uFE0F That box is already taken.");
                         }
                     }
                 }
@@ -551,19 +556,15 @@ public class GamePlayScreen extends JFrame {
                     }
                 }
             }
-            // Column highlight + ghost landing preview under the cursor.
-            if (hoverCol >= 0 && hoverCol < cols) {
+            // Highlight the exact hovered box + ghost preview of your disc.
+            if (hoverRow >= 0 && hoverRow < rows && hoverCol >= 0 && hoverCol < cols) {
                 int hx = sx + hoverCol * cell;
+                int hy = sy + hoverRow * cell;
                 g2.setColor(new Color(255, 255, 255, 28));
-                g2.fillRoundRect(hx + 2, sy, cell - 4, rows * cell, 10, 10);
-
-                int landRow = -1;
-                for (int r = rows - 1; r >= 0; r--) {
-                    if (board[r][hoverCol] == ' ') { landRow = r; break; }
-                }
-                if (landRow >= 0) {
+                g2.fillRoundRect(hx + 2, hy + 2, cell - 4, cell - 4, 10, 10);
+                if (board[hoverRow][hoverCol] == ' ') {
                     g2.setColor(new Color(220, 80, 80, 90));
-                    g2.fillOval(hx + 9, sy + landRow * cell + 9, cell - 18, cell - 18);
+                    g2.fillOval(hx + 9, hy + 9, cell - 18, cell - 18);
                 }
             }
 

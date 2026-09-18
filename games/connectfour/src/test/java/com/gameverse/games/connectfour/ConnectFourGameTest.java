@@ -92,6 +92,46 @@ class ConnectFourGameTest {
     }
 
     @Test
+    void placesDiscExactlyWhereClickedWithoutGravity() {
+        ConnectFourGame game = new ConnectFourGame();
+        game.start();
+
+        // Click a floating box in the middle of an empty board.
+        assertTrue(game.makeMoveAt(2, 3));
+        char[][] board = game.getBoard();
+        assertEquals('R', board[2][3]);
+        // Nothing should have fallen to the bottom of the column.
+        assertEquals(' ', board[5][3]);
+        assertEquals(' ', board[4][3]);
+        assertEquals(' ', board[3][3]);
+        assertEquals('Y', game.getCurrentPlayer());
+
+        // Reject placing on an occupied box or outside the board.
+        assertFalse(game.makeMoveAt(2, 3));
+        assertFalse(game.makeMoveAt(-1, 0));
+        assertFalse(game.makeMoveAt(6, 0));
+        assertFalse(game.makeMoveAt(0, 7));
+    }
+
+    @Test
+    void detectsWinFromExactPlacement() {
+        ConnectFourGame game = new ConnectFourGame();
+        game.start();
+
+        // Human places a horizontal row anywhere on the board.
+        assertTrue(game.makeMoveAt(2, 0));
+        game.makeMove(6); // AI drops via gravity in column 6
+        assertTrue(game.makeMoveAt(2, 1));
+        game.makeMove(6);
+        assertTrue(game.makeMoveAt(2, 2));
+        game.makeMove(6);
+        assertTrue(game.makeMoveAt(2, 3));
+
+        assertTrue(game.isGameOver());
+        assertEquals(GameResult.Status.WON, game.getResult().getStatus());
+    }
+
+    @Test
     void rejectsInvalidColumnAndFullColumn() {
         ConnectFourGame game = new ConnectFourGame();
         game.start();
