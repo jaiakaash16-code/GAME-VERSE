@@ -83,36 +83,57 @@ public class ConnectFourGame extends BaseGame {
         if (!isRunning() || gameOver || column < 0 || column >= COLS) {
             return false;
         }
-        // A human move invalidates the previous AI reply so the UI can tell
-        // apart "AI hasn't answered yet" from a stale column.
-        if (currentPlayer == humanPlayer) {
-            lastAiColumn = -1;
-        }
         if (currentPlayer != humanPlayer && currentPlayer != aiPlayer) {
             return false;
         }
 
-        for (int row = ROWS - 1; row >= 0; row--) {
-            if (board[row][column] == EMPTY) {
-                board[row][column] = currentPlayer;
-                moves++;
+        int row = getDropRow(column);
+        if (row == -1) {
+            return false;
+        }
+        if (currentPlayer == humanPlayer) {
+            lastAiColumn = -1;
+        }
+        return place(row, column);
+    }
 
-                if (hasConnectFour(row, column, currentPlayer)) {
-                    finishGame(currentPlayer == humanPlayer ? GameResult.Status.WON : GameResult.Status.LOST, 200);
-                    return true;
-                }
+    /**
+     * Places the current player's disc in an exact cell — no gravity.
+     * Used by the UI so the disc lands precisely where the user clicks.
+     */
+    public boolean makeMoveAt(int row, int col) {
+        if (!isRunning() || gameOver || row < 0 || row >= ROWS || col < 0 || col >= COLS) {
+            return false;
+        }
+        if (currentPlayer != humanPlayer && currentPlayer != aiPlayer) {
+            return false;
+        }
+        if (board[row][col] != EMPTY) {
+            return false;
+        }
+        if (currentPlayer == humanPlayer) {
+            lastAiColumn = -1;
+        }
+        return place(row, col);
+    }
 
-                if (moves >= ROWS * COLS) {
-                    finishGame(GameResult.Status.DRAWN, 100);
-                    return true;
-                }
+    /** Shared placement logic: mark cell, check win/draw, switch player. */
+    private boolean place(int row, int col) {
+        board[row][col] = currentPlayer;
+        moves++;
 
-                currentPlayer = (currentPlayer == humanPlayer) ? aiPlayer : humanPlayer;
-                return true;
-            }
+        if (hasConnectFour(row, col, currentPlayer)) {
+            finishGame(currentPlayer == humanPlayer ? GameResult.Status.WON : GameResult.Status.LOST, 200);
+            return true;
         }
 
-        return false;
+        if (moves >= ROWS * COLS) {
+            finishGame(GameResult.Status.DRAWN, 100);
+            return true;
+        }
+
+        currentPlayer = (currentPlayer == humanPlayer) ? aiPlayer : humanPlayer;
+        return true;
     }
 
     public char[][] getBoard() {
