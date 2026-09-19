@@ -4,11 +4,14 @@ import com.gameverse.core.GameRegistry;
 import com.gameverse.games.blackjack.BlackjackGame;
 import com.gameverse.games.chess.ChessGame;
 import com.gameverse.games.connectfour.ConnectFourGame;
+import com.gameverse.games.dungeon.DungeonGame;
 import com.gameverse.games.memory.MemoryGame;
 import com.gameverse.games.pong.PongGame;
 import com.gameverse.games.racing.RacingGame;
 import com.gameverse.games.snake.SnakeGame;
+import com.gameverse.games.soccer.SoccerGame;
 import com.gameverse.games.tictactoe.TicTacToeGame;
+import com.gameverse.games.zombie.ZombieGame;
 import com.gameverse.player.Player;
 import com.gameverse.player.PlayerManager;
 
@@ -34,10 +37,13 @@ public class GameLauncher {
         registry.registerGame("Snake", SnakeGame.class);
         registry.registerGame("Pong", PongGame.class);
         registry.registerGame("Tic-Tac-Toe", TicTacToeGame.class);
-        registry.registerGame("Connect Four", ConnectFourGame.class);
-        registry.registerGame("Blackjack", BlackjackGame.class);
         registry.registerGame("Memory Game", MemoryGame.class);
         registry.registerGame("Mini Racing", RacingGame.class);
+        registry.registerGame("Connect Four", ConnectFourGame.class);
+        registry.registerGame("Blackjack", BlackjackGame.class);
+        registry.registerGame("2D Soccer", SoccerGame.class);
+        registry.registerGame("Zombie Survival", ZombieGame.class);
+        registry.registerGame("Dungeon Escape", DungeonGame.class);
         System.out.println("✓ Registered " + registry.getGameCount() + " games");
     }
 

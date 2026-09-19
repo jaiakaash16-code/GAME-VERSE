@@ -6,8 +6,11 @@ import com.gameverse.core.Game;
 import com.gameverse.core.GameManager;
 import com.gameverse.core.GameResult;
 import com.gameverse.games.chess.ChessGame;
+import com.gameverse.games.dungeon.DungeonGame;
 import com.gameverse.games.memory.MemoryGame;
 import com.gameverse.games.snake.SnakeGame;
+import com.gameverse.games.soccer.SoccerGame;
+import com.gameverse.games.zombie.ZombieGame;
 import com.gameverse.leaderboard.LeaderboardManager;
 import com.gameverse.player.Player;
 import com.gameverse.rewards.CoinManager;
@@ -18,8 +21,10 @@ import java.awt.*;
 import java.awt.event.*;
 import java.lang.reflect.Field;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Fully interactive game screen — all 6 games playable with keyboard and mouse.
@@ -43,7 +48,9 @@ public class GamePlayScreen extends JFrame {
     private Difficulty currentDifficulty = Difficulty.MEDIUM;
     private int hoverRow = -1, hoverCol = -1;
     private boolean upHeld, downHeld; // held-key state for continuous Pong paddle movement
+    private final Set<Integer> heldKeys = new HashSet<>(); // held WASD/sprint state for action games
     private final Map<Difficulty, JButton> diffButtons = new HashMap<>();
+    private JButton muteButton;
 
     // Colors
     private static final Color BG = new Color(18, 18, 28);
@@ -73,7 +80,10 @@ public class GamePlayScreen extends JFrame {
         // made there is silently ignored. Grab keyboard focus once the frame is
         // actually shown, and re-grab it whenever the window regains activation
         // (after Alt-Tab, dialogs, etc.) so arrow keys always reach the board.
-        SwingUtilities.invokeLater(() -> boardPanel.requestFocusInWindow());
+        SwingUtilities.invokeLater(() -> {
+            boardPanel.requestFocusInWindow();
+            updateMuteButton();
+        });
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowActivated(WindowEvent e) {
@@ -83,6 +93,7 @@ public class GamePlayScreen extends JFrame {
             public void windowDeactivated(WindowEvent e) {
                 upHeld = false;
                 downHeld = false;
+                heldKeys.clear();
             }
         });
     }
@@ -134,42 +145,78 @@ public class GamePlayScreen extends JFrame {
         JPanel bar = new JPanel(new BorderLayout());
         bar.setBackground(PANEL_BG);
         bar.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(50, 50, 70)),
+            BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(45, 48, 70)),
             BorderFactory.createEmptyBorder(10, 20, 10, 20)));
-        
+
         // Left side: title + difficulty selector
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
         left.setOpaque(false);
-        
+
         JLabel title = new JLabel("\uD83C\uDFAE " + gameName);
         title.setFont(new Font("Segoe UI", Font.BOLD, 18));
         title.setForeground(ACCENT);
-        
-        // Difficulty buttons
+
+        // Difficulty selector
         JPanel diffPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         diffPanel.setOpaque(false);
         diffPanel.add(createDiffButton("Easy", Difficulty.EASY));
         diffPanel.add(createDiffButton("Medium", Difficulty.MEDIUM));
         diffPanel.add(createDiffButton("Hard", Difficulty.HARD));
-        
+
         left.add(title);
         left.add(diffPanel);
-        
-        // Right side: score + timer
-        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
+
+        // Right side: score / time pills + mute toggle
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         right.setOpaque(false);
+
         scoreLabel = new JLabel("Score: 0");
-        scoreLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        scoreLabel.setFont(new Font("Consolas", Font.BOLD, 13));
         scoreLabel.setForeground(GOLD);
+        scoreLabel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(120, 100, 40)),
+            BorderFactory.createEmptyBorder(4, 10, 4, 10)));
+        scoreLabel.setOpaque(true);
+        scoreLabel.setBackground(CARD_BG);
+
         timerLabel = new JLabel("Time: 0s");
-        timerLabel.setFont(new Font("Consolas", Font.PLAIN, 13));
-        timerLabel.setForeground(TEXT_DIM);
+        timerLabel.setFont(new Font("Consolas", Font.BOLD, 13));
+        timerLabel.setForeground(ACCENT);
+        timerLabel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(60, 64, 90)),
+            BorderFactory.createEmptyBorder(4, 10, 4, 10)));
+        timerLabel.setOpaque(true);
+        timerLabel.setBackground(CARD_BG);
+
+        muteButton = new JButton("\uD83D\uDD0A");
+        muteButton.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 13));
+        muteButton.setFocusPainted(false);
+        muteButton.setContentAreaFilled(false);
+        muteButton.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(60, 64, 90)),
+            BorderFactory.createEmptyBorder(3, 8, 3, 8)));
+        muteButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        muteButton.setToolTipText("Mute / unmute sound effects");
+        muteButton.addActionListener(e -> {
+            SoundFx.setMuted(!SoundFx.isMuted());
+            updateMuteButton();
+            if (!SoundFx.isMuted()) SoundFx.uiClick();
+        });
+
         right.add(scoreLabel);
         right.add(timerLabel);
-        
+        right.add(muteButton);
+
         bar.add(left, BorderLayout.WEST);
         bar.add(right, BorderLayout.EAST);
         return bar;
+    }
+
+    private void updateMuteButton() {
+        boolean m = SoundFx.isMuted();
+        muteButton.setText(m ? "\uD83D\uDD07" : "\uD83D\uDD0A");
+        muteButton.setForeground(m ? TEXT_DIM : TEXT);
+        muteButton.setToolTipText(m ? "Sound muted \u2014 click to unmute" : "Mute sound effects");
     }
 
     private JButton createDiffButton(String label, Difficulty diff) {
@@ -218,7 +265,7 @@ public class GamePlayScreen extends JFrame {
         JPanel c = new JPanel(new BorderLayout());
         c.setBackground(PANEL_BG);
         c.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(50, 50, 70)),
+            BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(45, 48, 70)),
             BorderFactory.createEmptyBorder(10, 20, 10, 20)));
         statusLabel = new JLabel(getHint());
         statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
@@ -226,9 +273,15 @@ public class GamePlayScreen extends JFrame {
         JPanel btns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         btns.setOpaque(false);
         JButton restart = makeBtn("\uD83D\uDD04 Restart", ACCENT);
-        restart.addActionListener(e -> restartGame());
-        JButton end = makeBtn("\uD83C\uDFC1 End", RED);
-        end.addActionListener(e -> endGame(true));
+        restart.addActionListener(e -> {
+            SoundFx.uiClick();
+            restartGame();
+        });
+        JButton end = makeBtn("\uD83C\uDFC1 End Game", RED);
+        end.addActionListener(e -> {
+            SoundFx.uiClick();
+            endGame(true);
+        });
         btns.add(restart);
         btns.add(end);
         c.add(statusLabel, BorderLayout.WEST);
@@ -241,10 +294,24 @@ public class GamePlayScreen extends JFrame {
         b.setFont(new Font("Segoe UI", Font.BOLD, 12));
         b.setBackground(bg);
         b.setForeground(Color.WHITE);
-        b.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+        b.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(255, 255, 255, 40)),
+            BorderFactory.createEmptyBorder(8, 18, 8, 18)));
         b.setFocusPainted(false);
         b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        b.addMouseListener(new MouseAdapter() {
+            @Override public void mouseEntered(MouseEvent e) { b.setBackground(brighter(bg)); b.repaint(); }
+            @Override public void mouseExited(MouseEvent e)  { b.setBackground(bg); b.repaint(); }
+        });
         return b;
+    }
+
+    /** Lighten a color for hover states. */
+    private static Color brighter(Color c) {
+        return new Color(
+            Math.min(255, c.getRed() + 30),
+            Math.min(255, c.getGreen() + 30),
+            Math.min(255, c.getBlue() + 30));
     }
 
     private String getHint() {
@@ -258,6 +325,9 @@ public class GamePlayScreen extends JFrame {
             case "Memory Game" -> "\uD83C\uDFAE Click cards to flip | Beat the AI opponent!" + diffStr;
             case "Mini Racing" -> "\uD83C\uDFAE \u2191 accelerate, \u2193 brake | Race to the finish!" + diffStr;
             case "Chess" -> "\uD83C\uDFAE Click white piece \u2192 click destination | Move king 2 squares to castle | Checkmate to win!" + diffStr;
+            case "2D Soccer" -> "\u26BD WASD to move | Space shoot | E pass | Shift sprint | Score more goals than the AI before the timer ends!" + diffStr;
+            case "Zombie Survival" -> "\uD83E\uDDFF WASD to move | Mouse aim + click to shoot | Space shoots the nearest zombie | Survive the waves!" + diffStr;
+            case "Dungeon Escape" -> "\uD83C\uDFF0 WASD to move | Space attack | E open doors | Grab the key and reach the exit!" + diffStr;
             default -> "\uD83C\uDFAE Play!" + diffStr;
         };
     }
@@ -272,6 +342,12 @@ public class GamePlayScreen extends JFrame {
                 int code = e.getKeyCode();
                 if (code == KeyEvent.VK_R) restartGame();
                 else if (code == KeyEvent.VK_ESCAPE) endGame(true);
+                else if (isActionGame()) {
+                    // Track held movement keys — the game loop feeds them into the
+                    // game each frame so WASD movement is smooth and continuous.
+                    heldKeys.add(code);
+                    handleActionKey(code);
+                }
                 else if ("Pong".equals(gameName)
                         && (code == KeyEvent.VK_UP || code == KeyEvent.VK_DOWN
                             || code == KeyEvent.VK_W || code == KeyEvent.VK_S)) {
@@ -286,13 +362,22 @@ public class GamePlayScreen extends JFrame {
             @Override
             public void keyReleased(KeyEvent e) {
                 int code = e.getKeyCode();
+                heldKeys.remove(code);
                 if (code == KeyEvent.VK_UP || code == KeyEvent.VK_W) upHeld = false;
                 else if (code == KeyEvent.VK_DOWN || code == KeyEvent.VK_S) downHeld = false;
             }
         });
         boardPanel.addMouseListener(new MouseAdapter() {
             @Override
-            public void mousePressed(MouseEvent e) { boardPanel.requestFocusInWindow(); }
+            public void mousePressed(MouseEvent e) {
+                boardPanel.requestFocusInWindow();
+                // Zombie Survival: left click fires toward the mouse.
+                if ("Zombie Survival".equals(gameName) && game != null && game.isRunning()) {
+                    ((ZombieGame) game).setAim(e.getX(), e.getY());
+                    ((ZombieGame) game).shoot();
+                    boardPanel.repaint();
+                }
+            }
             @Override
             public void mouseClicked(MouseEvent e) { handleClick(e.getX(), e.getY()); }
             @Override
@@ -307,7 +392,7 @@ public class GamePlayScreen extends JFrame {
         boardPanel.requestFocusInWindow();
     }
 
-    /** Track the cell under the mouse for hover highlights (Tic-Tac-Toe). */
+    /** Track the cell under the mouse for hover highlights (Tic-Tac-Toe, Connect Four) and Zombie aim. */
     private void updateHover(int mx, int my) {
         // Connect Four: highlight the exact box under the cursor.
         if ("Connect Four".equals(gameName)) {
@@ -322,6 +407,13 @@ public class GamePlayScreen extends JFrame {
                 if (c >= 0 && c < 7 && r >= 0 && r < 6) { newRow = r; newCol = c; }
             }
             if (newRow != hoverRow || newCol != hoverCol) { hoverRow = newRow; hoverCol = newCol; boardPanel.repaint(); }
+            return;
+        }
+        if ("Zombie Survival".equals(gameName)) {
+            if (game != null && game.isRunning()) {
+                ((ZombieGame) game).setAim(mx, my);
+                boardPanel.repaint();
+            }
             return;
         }
         if (!"Tic-Tac-Toe".equals(gameName)) {
@@ -362,6 +454,54 @@ public class GamePlayScreen extends JFrame {
             }
         } catch (Exception ignored) {}
         boardPanel.repaint();
+    }
+
+    /** True for the continuous-movement action games that use held WASD keys. */
+    private boolean isActionGame() {
+        return "2D Soccer".equals(gameName)
+            || "Zombie Survival".equals(gameName)
+            || "Dungeon Escape".equals(gameName);
+    }
+
+    /** Route press-and-release action keys (Space / E / Shift) to the action games. */
+    private void handleActionKey(int code) {
+        if (game == null || !game.isRunning()) return;
+        try {
+            switch (gameName) {
+                case "2D Soccer" -> {
+                    SoccerGame sg = (SoccerGame) game;
+                    if (code == KeyEvent.VK_SPACE) { sg.shoot(); boardPanel.repaint(); }
+                    else if (code == KeyEvent.VK_E) { sg.pass(); boardPanel.repaint(); }
+                }
+                case "Zombie Survival" -> {
+                    if (code == KeyEvent.VK_SPACE) { ((ZombieGame) game).shoot(); boardPanel.repaint(); }
+                }
+                case "Dungeon Escape" -> {
+                    DungeonGame dg = (DungeonGame) game;
+                    if (code == KeyEvent.VK_SPACE) { dg.attack(); boardPanel.repaint(); }
+                    else if (code == KeyEvent.VK_E) { dg.interact(); boardPanel.repaint(); }
+                }
+            }
+        } catch (Exception ignored) {}
+    }
+
+    /** Feed the held WASD/sprint state into the action games every frame. */
+    private void applyHeldInput() {
+        if (game == null || !isActionGame()) return;
+        boolean up = heldKeys.contains(KeyEvent.VK_W) || heldKeys.contains(KeyEvent.VK_UP);
+        boolean down = heldKeys.contains(KeyEvent.VK_S) || heldKeys.contains(KeyEvent.VK_DOWN);
+        boolean left = heldKeys.contains(KeyEvent.VK_A) || heldKeys.contains(KeyEvent.VK_LEFT);
+        boolean right = heldKeys.contains(KeyEvent.VK_D) || heldKeys.contains(KeyEvent.VK_RIGHT);
+        try {
+            switch (gameName) {
+                case "2D Soccer" -> ((SoccerGame) game).setMove(up, down, left, right,
+                    heldKeys.contains(KeyEvent.VK_SHIFT));
+                case "Zombie Survival", "Dungeon Escape" -> {
+                    if (game instanceof ZombieGame) ((ZombieGame) game).setMove(up, down, left, right);
+                    else ((DungeonGame) game).setMove(up, down, left, right);
+                }
+            }
+        } catch (Exception ignored) {}
     }
 
     private void handleClick(int mx, int my) {
@@ -435,12 +575,19 @@ public class GamePlayScreen extends JFrame {
                 }
                 case "Chess" -> {
                     ChessGame cg = (ChessGame) game;
-                    int bs = Math.min(boardPanel.getWidth(), boardPanel.getHeight()) - 40;
+                    // Must match drawChess geometry exactly so clicks land on
+                    // the square that was drawn there.
+                    int bs = Math.min(boardPanel.getWidth(), boardPanel.getHeight()) - 56;
                     int cs = bs / 8;
                     int sx = (boardPanel.getWidth() - bs) / 2;
-                    int sy = (boardPanel.getHeight() - bs) / 2;
+                    int sy = (boardPanel.getHeight() - bs) / 2 + 6;
                     int col = (mx - sx) / cs, row = (my - sy) / cs;
                     if (row >= 0 && row < 8 && col >= 0 && col < 8) {
+                        // Snapshot before the move for sound selection.
+                        char movedPiece = cg.getSelectedRow() >= 0 ? cg.getPiece(cg.getSelectedRow(), cg.getSelectedCol()) : ' ';
+                        char target = cg.getPiece(row, col);
+                        boolean wasCastleCandidate = movedPiece == 'K' && Math.abs(col - cg.getSelectedCol()) == 2;
+
                         boolean ok = cg.handleClick(row, col);
                         // Pawn reached the last rank: let the player choose the
                         // promotion piece before the AI answers.
@@ -452,7 +599,19 @@ public class GamePlayScreen extends JFrame {
                                 JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE,
                                 null, pieces, pieces[0]);
                             char chosen = pick >= 0 ? "QRBN".charAt(pick) : 'Q';
-                            cg.promote(chosen);
+                            if (cg.promote(chosen)) SoundFx.promote();
+                        } else if (ok) {
+                            // Choose the event sound: check > castle > capture > move.
+                            // A move that selected/reselected a piece (no turn change)
+                            // gets a soft click instead.
+                            if (cg.isWhiteToMove()) {
+                                if (cg.isBlackInCheck()) SoundFx.check();
+                                else if (wasCastleCandidate && movedPiece == 'K' && cg.getSelectedRow() == -1) SoundFx.castle();
+                                else if (target != ' ' && ChessGame.isWhitePiece(movedPiece) && !ChessGame.isWhitePiece(target)) SoundFx.capture();
+                                else SoundFx.move();
+                            } else {
+                                SoundFx.uiClick(); // selection click, not a move
+                            }
                         }
                         statusLabel.setText(ok ? "\u265F\uFE0F Move made! Score: " + game.getScore() : "\u265F\uFE0F Invalid move");
                     }
@@ -478,6 +637,7 @@ public class GamePlayScreen extends JFrame {
                     if (downHeld) game.getClass().getMethod("movePaddleDown").invoke(game);
                 } catch (Exception ignored) {}
             }
+            applyHeldInput();
             game.update(ms / 1000f);
             boardPanel.repaint();
             if (game.getResult() != null) endGame(false);
@@ -488,7 +648,7 @@ public class GamePlayScreen extends JFrame {
     private int getGameLoopInterval() {
         int base = switch (gameName) {
             case "Snake" -> 150;
-            case "Pong" -> 16;
+            case "Pong", "2D Soccer", "Zombie Survival", "Dungeon Escape" -> 16;
             case "Connect Four", "Blackjack" -> 120;
             case "Memory Game", "Chess" -> 50;
             default -> 33;
@@ -514,13 +674,16 @@ public class GamePlayScreen extends JFrame {
 
         switch (gameName) {
             case "Tic-Tac-Toe" -> drawTicTacToe(g2, w, h);
-            case "Connect Four" -> drawConnectFour(g2, w, h);
-            case "Blackjack" -> drawBlackjack(g2, w, h);
             case "Snake" -> drawSnake(g2, w, h);
             case "Pong" -> drawPong(g2, w, h);
             case "Memory Game" -> drawMemory(g2, w, h);
             case "Mini Racing" -> drawRacing(g2, w, h);
             case "Chess" -> drawChess(g2, w, h);
+            case "Connect Four" -> drawConnectFour(g2, w, h);
+            case "Blackjack" -> drawBlackjack(g2, w, h);
+            case "2D Soccer" -> drawSoccer(g2, w, h);
+            case "Zombie Survival" -> drawZombie(g2, w, h);
+            case "Dungeon Escape" -> drawDungeon(g2, w, h);
             default -> drawCenter(g2, gameName, w, h);
         }
     }
@@ -978,44 +1141,104 @@ public class GamePlayScreen extends JFrame {
     /* ──── CHESS ──── */
     private void drawChess(Graphics2D g2, int w, int h) {
         ChessGame cg = (ChessGame) game;
-        int bs = Math.min(w, h) - 40;
+        int bs = Math.min(w, h) - 56;
         int cs = bs / 8;
-        int sx = (w - bs) / 2, sy = (h - bs) / 2;
+        int sx = (w - bs) / 2, sy = (h - bs) / 2 + 6;
 
-        // Column labels
-        g2.setColor(TEXT_DIM);
+        // Coordinates around the board
         g2.setFont(new Font("Consolas", Font.PLAIN, 11));
         for (int c = 0; c < 8; c++) {
-            g2.drawString(String.valueOf((char)('a' + c)), sx + c * cs + cs / 2 - 3, sy - 5);
+            g2.setColor(TEXT_DIM);
+            g2.drawString(String.valueOf((char) ('a' + c)),
+                sx + c * cs + cs / 2 - 3, sy - 6);
         }
 
+        // Last move (from/to) for highlighting
+        int[] lmFrom = cg.getLastMoveFrom();
+        int[] lmTo = cg.getLastMoveTo();
+
+        // Legal destinations for the selected piece — the "moves per piece rules"
+        java.util.List<int[]> dests = cg.getLegalDestinations();
+        java.util.Set<Long> destSet = new java.util.HashSet<>();
+        for (int[] d : dests) destSet.add((long) d[0] * 100 + d[1]);
+
+        // Board with rounded outer frame
+        g2.setColor(new Color(0, 0, 0, 90));
+        g2.fillRoundRect(sx - 6, sy - 6, bs + 12, bs + 12, 18, 18);
+        g2.setColor(new Color(52, 55, 80));
+        g2.setStroke(new BasicStroke(1.5f));
+        g2.drawRoundRect(sx - 6, sy - 6, bs + 12, bs + 12, 18, 18);
+
         for (int r = 0; r < 8; r++) {
-            // Row labels
             g2.setColor(TEXT_DIM);
-            g2.setFont(new Font("Consolas", Font.PLAIN, 11));
-            g2.drawString(String.valueOf(8 - r), sx - 14, sy + r * cs + cs / 2 + 4);
+            g2.drawString(String.valueOf(8 - r), sx - 16, sy + r * cs + cs / 2 + 4);
 
             for (int c = 0; c < 8; c++) {
                 int x = sx + c * cs, y = sy + r * cs;
-
-                // Square colors
                 boolean light = (r + c) % 2 == 0;
-                g2.setColor(light ? new Color(200, 210, 190) : new Color(100, 130, 90));
-                g2.fillRect(x, y, cs, cs);
 
-                // Selected highlight
-                if (r == cg.getSelectedRow() && c == cg.getSelectedCol()) {
-                    g2.setColor(new Color(255, 255, 0, 120));
-                    g2.fillRect(x, y, cs, cs);
+                // Square — soft green tones with rounded corners
+                g2.setColor(light ? new Color(188, 202, 178) : new Color(96, 128, 88));
+                g2.fillRoundRect(x, y, cs, cs, 6, 6);
+
+                // Last-move tint (soft amber)
+                boolean lastHit = (lmFrom != null && lmFrom[0] == r && lmFrom[1] == c)
+                    || (lmTo != null && lmTo[0] == r && lmTo[1] == c);
+                if (lastHit) {
+                    g2.setColor(new Color(255, 200, 80, 70));
+                    g2.fillRoundRect(x, y, cs, cs, 6, 6);
                 }
 
-                // Red glow under a king that is in check
+                // Selected square — accent ring + tint
+                boolean selected = r == cg.getSelectedRow() && c == cg.getSelectedCol();
+                if (selected) {
+                    g2.setColor(new Color(100, 150, 255, 40));
+                    g2.fillRoundRect(x, y, cs, cs, 8, 8);
+                    g2.setColor(new Color(100, 150, 255, 190));
+                    g2.setStroke(new BasicStroke(3f));
+                    g2.drawRoundRect(x + 1, y + 1, cs - 3, cs - 3, 8, 8);
+                }
+
+                // Check glow under a king in check
                 char sq = cg.getPiece(r, c);
                 boolean kingInCheck = (sq == 'K' && cg.isWhiteInCheck())
                     || (sq == 'k' && cg.isBlackInCheck());
                 if (kingInCheck) {
-                    g2.setColor(new Color(230, 60, 60, 150));
-                    g2.fillOval(x + 2, y + 2, cs - 4, cs - 4);
+                    g2.setPaint(new RadialGradientPaint(
+                        new Point(x + cs / 2, y + cs / 2), cs / 1.6f,
+                        new float[]{0f, 1f},
+                        new Color[]{new Color(235, 60, 60, 170), new Color(235, 60, 60, 0)}));
+                    g2.fillRoundRect(x, y, cs, cs, 6, 6);
+                }
+
+                // Move hints: dots on quiet squares, red wedges on captures
+                if (destSet.contains((long) r * 100 + c)) {
+                    char target = cg.getPiece(r, c);
+                    if (target == ' ') {
+                        g2.setColor(new Color(45, 60, 45, 110));
+                        int d = Math.max(8, cs / 5);
+                        g2.fillOval(x + (cs - d) / 2, y + (cs - d) / 2, d, d);
+                    } else {
+                        g2.setColor(new Color(220, 70, 70, 190));
+                        int t = Math.max(7, cs / 4);
+                        int[][][] corners = {
+                            {{x, y}, {x + t, y}, {x, y + t}},
+                            {{x + cs, y}, {x + cs - t, y}, {x + cs, y + t}},
+                            {{x, y + cs}, {x + t, y + cs}, {x, y + cs - t}},
+                            {{x + cs, y + cs}, {x + cs - t, y + cs}, {x + cs, y + cs - t}}
+                        };
+                        for (int[][] tri : corners) {
+                            Polygon poly = new Polygon();
+                            for (int[] p : tri) poly.addPoint(p[0], p[1]);
+                            g2.fill(poly);
+                        }
+                    }
+                }
+
+                // Castling hint: mark the rook squares the king may castle to
+                if (selected && sq == 'K' && c == 4) {
+                    if (cg.canWhiteCastleKingside()) drawCastleHint(g2, sx + 6 * cs, sy + r * cs, cs);
+                    if (cg.canWhiteCastleQueenside()) drawCastleHint(g2, sx + 2 * cs, sy + r * cs, cs);
                 }
 
                 // Piece
@@ -1024,40 +1247,383 @@ public class GamePlayScreen extends JFrame {
                     String sym = ChessGame.getSymbol(piece);
                     boolean white = ChessGame.isWhitePiece(piece);
 
-                    // Piece shadow
-                    g2.setFont(new Font("Segoe UI Symbol", Font.PLAIN, cs - 10));
-                    g2.setColor(new Color(0, 0, 0, 60));
+                    g2.setFont(new Font("Segoe UI Symbol", Font.PLAIN, cs - 12));
                     FontMetrics fm = g2.getFontMetrics();
-                    g2.drawString(sym, x + (cs - fm.stringWidth(sym)) / 2 + 2,
-                        y + (cs + fm.getAscent() - fm.getDescent()) / 2 + 2);
+                    int px = x + (cs - fm.stringWidth(sym)) / 2;
+                    int py = y + (cs + fm.getAscent() - fm.getDescent()) / 2;
 
-                    // Piece
-                    g2.setColor(white ? new Color(255, 255, 240) : new Color(40, 40, 40));
-                    g2.drawString(sym, x + (cs - fm.stringWidth(sym)) / 2,
-                        y + (cs + fm.getAscent() - fm.getDescent()) / 2);
+                    // Soft drop shadow
+                    g2.setColor(new Color(0, 0, 0, 70));
+                    g2.drawString(sym, px + 2, py + 3);
 
-                    // Piece outline for black pieces
-                    if (!white) {
-                        g2.setColor(new Color(100, 100, 100));
-                        g2.drawOval(x + cs/4, y + cs/4, cs/2, cs/2);
+                    // White pieces get a subtle outline for depth
+                    if (white) {
+                        g2.setColor(new Color(90, 100, 90));
+                        g2.drawString(sym, px - 1, py - 1);
+                        g2.drawString(sym, px + 1, py - 1);
+                        g2.drawString(sym, px - 1, py + 1);
+                        g2.drawString(sym, px + 1, py + 1);
+                    }
+
+                    g2.setColor(white ? new Color(250, 250, 240) : new Color(35, 38, 46));
+                    g2.drawString(sym, px, py);
+                }
+            }
+        }
+
+        // Status line
+        g2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        String turn;
+        Color turnColor = TEXT_DIM;
+        if (cg.isWhiteInCheck()) {
+            turn = "\u26A0 CHECK! Your king is under attack \u2014 get it safe";
+            turnColor = RED;
+        } else if (cg.isBlackInCheck()) {
+            turn = "\u2694 Check on black \u2014 keep the pressure on!";
+            turnColor = GOLD;
+        } else if (cg.isPromotionPending()) {
+            turn = "\u2B50 Pawn reached the last rank \u2014 choose its promotion piece";
+            turnColor = GOLD;
+        } else {
+            turn = cg.isWhiteToMove() ? "Your turn (white)" : "AI thinking...";
+        }
+        g2.setColor(turnColor);
+        g2.drawString(turn + "   \u2022   Click piece to see its legal moves", 15, h - 5);
+        g2.setColor(TEXT_DIM);
+        String meta = "Moves: " + cg.getMoveCount() + "  |  [" + currentDifficulty.getDisplayName() + "]";
+        FontMetrics mf = g2.getFontMetrics();
+        g2.drawString(meta, w - mf.stringWidth(meta) - 15, h - 5);
+    }
+
+    /** Golden glow on a rook square involved in an available castling move. */
+    private void drawCastleHint(Graphics2D g2, int x, int y, int cs) {
+        g2.setColor(new Color(255, 200, 60, 150));
+        g2.setStroke(new BasicStroke(3f));
+        g2.drawRoundRect(x + 2, y + 2, cs - 5, cs - 5, 8, 8);
+        g2.setColor(new Color(255, 200, 60, 40));
+        g2.fillRoundRect(x + 2, y + 2, cs - 5, cs - 5, 8, 8);
+    }
+
+    /* ──── 2D SOCCER ──── */
+    private void drawSoccer(Graphics2D g2, int w, int h) {
+        SoccerGame sg = (SoccerGame) game;
+        float scale = Math.min(w / SoccerGame.FIELD_W, h / SoccerGame.FIELD_H);
+        float ox = (w - SoccerGame.FIELD_W * scale) / 2f;
+        float oy = (h - SoccerGame.FIELD_H * scale) / 2f;
+
+        // Pitch + mowing stripes
+        g2.setColor(new Color(30, 96, 48));
+        g2.fillRect((int) ox, (int) oy, (int) (SoccerGame.FIELD_W * scale), (int) (SoccerGame.FIELD_H * scale));
+        g2.setColor(new Color(26, 88, 44));
+        float stripe = SoccerGame.FIELD_W / 6f;
+        for (int i = 1; i < 6; i += 2) {
+            g2.fillRect((int) (ox + i * stripe * scale), (int) oy,
+                (int) (stripe * scale) + 1, (int) (SoccerGame.FIELD_H * scale));
+        }
+
+        // Lines: halfway line, centre circle, penalty boxes
+        g2.setColor(new Color(235, 235, 235));
+        g2.setStroke(new BasicStroke(2));
+        g2.drawLine((int) (ox + SoccerGame.FIELD_W / 2 * scale), (int) oy,
+            (int) (ox + SoccerGame.FIELD_W / 2 * scale), (int) (oy + SoccerGame.FIELD_H * scale));
+        g2.drawOval((int) (ox + (SoccerGame.FIELD_W / 2 - 45) * scale), (int) (oy + (SoccerGame.FIELD_H / 2 - 45) * scale),
+            (int) (90 * scale), (int) (90 * scale));
+        g2.drawRect((int) ox, (int) (oy + (SoccerGame.FIELD_H / 2 - 90) * scale),
+            (int) (90 * scale), (int) (180 * scale));
+        g2.drawRect((int) (ox + (SoccerGame.FIELD_W - 90) * scale), (int) (oy + (SoccerGame.FIELD_H / 2 - 90) * scale),
+            (int) (90 * scale), (int) (180 * scale));
+
+        // Goal mouths
+        g2.fillRect((int) ox, (int) (oy + (SoccerGame.FIELD_H / 2 - SoccerGame.GOAL_HALF) * scale),
+            4, (int) (SoccerGame.GOAL_HALF * 2 * scale));
+        g2.fillRect((int) (ox + SoccerGame.FIELD_W * scale) - 4, (int) (oy + (SoccerGame.FIELD_H / 2 - SoccerGame.GOAL_HALF) * scale),
+            4, (int) (SoccerGame.GOAL_HALF * 2 * scale));
+
+        // Ball
+        g2.setColor(Color.WHITE);
+        g2.fillOval((int) (ox + sg.getBallX() * scale) - 7, (int) (oy + sg.getBallY() * scale) - 7, 14, 14);
+        g2.setColor(Color.DARK_GRAY);
+        g2.fillOval((int) (ox + sg.getBallX() * scale) - 3, (int) (oy + sg.getBallY() * scale) - 3, 6, 6);
+
+        // Opponent + keeper
+        g2.setColor(RED);
+        g2.fillOval((int) (ox + sg.getOpponentX() * scale) - 12, (int) (oy + sg.getOpponentY() * scale) - 12, 24, 24);
+        g2.setColor(new Color(255, 190, 80));
+        g2.fillOval((int) (ox + sg.getKeeperX() * scale) - 11, (int) (oy + sg.getKeeperY() * scale) - 11, 22, 22);
+
+        // Player + facing tick
+        g2.setColor(ACCENT);
+        g2.fillOval((int) (ox + sg.getPlayerX() * scale) - 12, (int) (oy + sg.getPlayerY() * scale) - 12, 24, 24);
+        g2.setColor(Color.WHITE);
+        g2.drawLine((int) (ox + sg.getPlayerX() * scale), (int) (oy + sg.getPlayerY() * scale),
+            (int) (ox + (sg.getPlayerX() + sg.getPlayerFacingX() * 18) * scale),
+            (int) (oy + (sg.getPlayerY() + sg.getPlayerFacingY() * 18) * scale));
+
+        // Scoreboard + clock
+        String scoreTxt = "YOU  " + sg.getPlayerGoals() + "  :  " + sg.getAiGoals() + "  AI";
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        FontMetrics fm = g2.getFontMetrics();
+        g2.setColor(new Color(0, 0, 0, 120));
+        g2.fillRoundRect((w - fm.stringWidth(scoreTxt)) / 2 - 12, 10, fm.stringWidth(scoreTxt) + 24, 28, 10, 10);
+        g2.setColor(sg.getPlayerGoals() > sg.getAiGoals() ? GOLD : TEXT);
+        g2.drawString(scoreTxt, (w - fm.stringWidth(scoreTxt)) / 2, 30);
+
+        String timeTxt = "⏱ " + (int) Math.ceil(sg.getMatchTimeLeft()) + "s";
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        g2.setColor(GOLD);
+        g2.drawString(timeTxt, 15, 26);
+
+        g2.setColor(TEXT_DIM);
+        g2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        g2.drawString("WASD move | Space shoot | E pass | Shift sprint | [" + currentDifficulty.getDisplayName() + "]", 15, h - 10);
+    }
+
+    /* ──── ZOMBIE SURVIVAL ──── */
+    private void drawZombie(Graphics2D g2, int w, int h) {
+        ZombieGame zg = (ZombieGame) game;
+
+        // Ground + scattered debris
+        g2.setColor(new Color(24, 26, 22));
+        g2.fillRect(0, 0, w, h);
+        g2.setColor(new Color(32, 35, 28));
+        for (int i = 0; i < 40; i++) {
+            g2.fillOval((i * 97) % w, (i * 53) % h, 6, 6);
+        }
+
+        // Power-ups
+        for (ZombieGame.PowerUp p : zg.getPowerUps()) {
+            boolean fading = p.life < 3f && ((int) (p.life * 6)) % 2 == 0;
+            if (fading) continue;
+            Color c = switch (p.type) {
+                case 0 -> new Color(80, 220, 120);
+                case 1 -> GOLD;
+                default -> new Color(255, 120, 80);
+            };
+            g2.setColor(c);
+            g2.fillOval((int) p.x - 9, (int) p.y - 9, 18, 18);
+            g2.setColor(Color.WHITE);
+            g2.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            String tag = switch (p.type) {
+                case 0 -> "+";
+                case 1 -> "⚡";
+                default -> "x2";
+            };
+            g2.drawString(tag, (int) p.x - 4, (int) p.y + 5);
+        }
+
+        // Zombies (boss = big)
+        for (ZombieGame.Zombie z : zg.getZombies()) {
+            int r = z.boss ? 26 : 13;
+            g2.setColor(z.flashTimer > 0 ? Color.WHITE : (z.boss ? new Color(150, 55, 55) : new Color(105, 165, 65)));
+            g2.fillOval((int) z.x - r, (int) z.y - r, r * 2, r * 2);
+            g2.setColor(new Color(60, 30, 30));
+            g2.drawOval((int) z.x - r, (int) z.y - r, r * 2, r * 2);
+            // HP bar
+            int bw = r * 2;
+            g2.setColor(new Color(40, 40, 50));
+            g2.fillRect((int) z.x - r, (int) z.y - r - 7, bw, 4);
+            g2.setColor(new Color(80, 200, 120));
+            g2.fillRect((int) z.x - r, (int) z.y - r - 7, (int) (bw * z.hp / (float) z.maxHp), 4);
+        }
+
+        // Bullets
+        g2.setColor(GOLD);
+        for (ZombieGame.Bullet b : zg.getBullets()) {
+            g2.fillOval((int) b.x - 3, (int) b.y - 3, 6, 6);
+        }
+
+        // Aim crosshair
+        if (zg.isAimSet()) {
+            g2.setColor(new Color(255, 255, 255, 150));
+            g2.drawOval((int) zg.getAimX() - 7, (int) zg.getAimY() - 7, 14, 14);
+            g2.drawLine((int) zg.getAimX() - 12, (int) zg.getAimY(), (int) zg.getAimX() + 12, (int) zg.getAimY());
+            g2.drawLine((int) zg.getAimX(), (int) zg.getAimY() - 12, (int) zg.getAimX(), (int) zg.getAimY() + 12);
+        }
+
+        // Player (blinks while invulnerable)
+        g2.setComposite(zg.getPlayerInvuln() > 0 && ((int) (zg.getPlayerInvuln() * 10)) % 2 == 0
+            ? AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.4f)
+            : AlphaComposite.SrcOver);
+        g2.setColor(GREEN);
+        g2.fillOval((int) zg.getPlayerX() - 14, (int) zg.getPlayerY() - 14, 28, 28);
+        g2.setComposite(AlphaComposite.SrcOver);
+        g2.setColor(new Color(150, 255, 180));
+        g2.fillOval((int) zg.getPlayerX() - 5, (int) zg.getPlayerY() - 5, 10, 10);
+
+        // HUD: HP bar
+        int barW = 160, barH = 14;
+        float hpFrac = zg.getPlayerHp() / (float) zg.getMaxHp();
+        g2.setColor(new Color(50, 20, 20));
+        g2.fillRoundRect(15, 14, barW, barH, 7, 7);
+        g2.setColor(hpFrac > 0.5f ? GREEN : hpFrac > 0.25f ? GOLD : RED);
+        g2.fillRoundRect(15, 14, (int) (barW * hpFrac), barH, 7, 7);
+        g2.setColor(TEXT);
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        g2.drawString("HP " + zg.getPlayerHp() + "/" + zg.getMaxHp(), 15, 46);
+        g2.setColor(TEXT_DIM);
+        g2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        g2.drawString("Kills: " + zg.getKills() + "  |  Zombies: " + zg.getZombiesRemaining(), 15, 64);
+
+        // Wave banner
+        String waveTxt = zg.isWaveActive()
+            ? "WAVE " + zg.getWave() + (zg.getWave() % 5 == 0 ? "  —  BOSS!" : "")
+            : "Wave " + (zg.getWave() + 1) + " incoming...";
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        FontMetrics fm = g2.getFontMetrics();
+        g2.setColor(GOLD);
+        g2.drawString(waveTxt, (w - fm.stringWidth(waveTxt)) / 2, 32);
+
+        // Power-up status
+        String status = (zg.isRapidActive() ? "⚡ Rapid   " : "") + (zg.isDamageActive() ? "x2 DMG" : "");
+        if (!status.isBlank()) {
+            g2.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            g2.setColor(new Color(120, 220, 160));
+            g2.drawString(status, 15, 84);
+        }
+
+        g2.setColor(TEXT_DIM);
+        g2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        g2.drawString("WASD move | Mouse aim + click to shoot | Space = shoot nearest | [" + currentDifficulty.getDisplayName() + "]", 15, h - 10);
+    }
+
+    /* ──── DUNGEON ESCAPE ──── */
+    private void drawDungeon(Graphics2D g2, int w, int h) {
+        DungeonGame dg = (DungeonGame) game;
+        char[][] map = dg.getMap();
+        int cols = DungeonGame.COLS, rows = DungeonGame.ROWS, ts = DungeonGame.TILE;
+        float scale = Math.min(w / (float) (cols * ts), h / (float) (rows * ts));
+        int ox = (int) ((w - cols * ts * scale) / 2f);
+        int oy = (int) ((h - rows * ts * scale) / 2f);
+
+        // Tiles
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                int x = ox + (int) (c * ts * scale);
+                int y = oy + (int) (r * ts * scale);
+                int s = (int) (ts * scale);
+                char t = map[r][c];
+                switch (t) {
+                    case '#' -> {
+                        g2.setColor(new Color(66, 58, 86));
+                        g2.fillRect(x, y, s, s);
+                        g2.setColor(new Color(92, 82, 118));
+                        g2.fillRect(x, y, s, 4);
+                        g2.fillRect(x, y, 4, s);
+                        g2.setColor(new Color(44, 38, 60));
+                        g2.fillRect(x + s - 4, y, 4, s);
+                        g2.fillRect(x, y + s - 4, s, 4);
+                    }
+                    case 'D' -> {
+                        g2.setColor(new Color(46, 32, 20));
+                        g2.fillRect(x, y, s, s);
+                        g2.setColor(new Color(120, 80, 48));
+                        g2.fillRect(x + 3, y + 3, s - 6, s - 6);
+                        g2.setColor(new Color(220, 180, 90));
+                        g2.fillOval(x + s / 2 - 3, y + s / 2 - 3, 6, 6);
+                    }
+                    case 'K' -> {
+                        g2.setColor(new Color(38, 38, 52));
+                        g2.fillRect(x, y, s, s);
+                        g2.setColor(GOLD);
+                        g2.fillOval(x + s / 2 - 6, y + s / 2 - 6, 12, 12);
+                        g2.setColor(Color.WHITE);
+                        g2.drawOval(x + s / 2 - 3, y + s / 2 - 3, 6, 6);
+                    }
+                    case 'X' -> {
+                        g2.setColor(new Color(30, 60, 38));
+                        g2.fillRect(x, y, s, s);
+                        g2.setColor(new Color(80, 200, 120));
+                        g2.drawRoundRect(x + 5, y + 5, s - 10, s - 10, 8, 8);
+                        g2.setFont(new Font("Segoe UI", Font.BOLD, s / 2));
+                        g2.drawString("X", x + s / 2 - 5, y + s / 2 + 6);
+                    }
+                    case 'T' -> {
+                        g2.setColor(new Color(52, 44, 42));
+                        g2.fillRect(x, y, s, s);
+                        g2.setColor(new Color(190, 190, 200));
+                        for (int i = 0; i < 3; i++) {
+                            int bx = x + 4 + i * 10;
+                            g2.fillPolygon(new int[]{bx, bx + 6, bx + 3},
+                                new int[]{y + s - 4, y + s - 4, y + 4}, 3);
+                        }
+                    }
+                    case '$' -> {
+                        g2.setColor(new Color(38, 38, 52));
+                        g2.fillRect(x, y, s, s);
+                        g2.setColor(GOLD);
+                        g2.fillOval(x + s / 2 - 6, y + s / 2 - 6, 12, 12);
+                        g2.setColor(new Color(140, 100, 20));
+                        g2.fillOval(x + s / 2 - 3, y + s / 2 - 3, 6, 6);
+                    }
+                    default -> {
+                        g2.setColor((c + r) % 2 == 0 ? new Color(44, 42, 56) : new Color(40, 38, 52));
+                        g2.fillRect(x, y, s, s);
                     }
                 }
             }
         }
 
+        // Enemies
+        for (DungeonGame.Enemy e : dg.getEnemies()) {
+            int er = (int) (e.half * scale);
+            int ex = ox + (int) (e.x * scale);
+            int ey = oy + (int) (e.y * scale);
+            g2.setColor(e.flashTimer > 0 ? Color.WHITE
+                : (e.boss ? new Color(190, 60, 60) : new Color(210, 95, 60)));
+            g2.fillOval(ex - er, ey - er, er * 2, er * 2);
+            g2.setColor(new Color(110, 28, 28));
+            g2.drawOval(ex - er, ey - er, er * 2, er * 2);
+            // HP bar
+            int ebw = er * 2;
+            g2.setColor(new Color(40, 40, 50));
+            g2.fillRect(ex - er, ey - er - 7, ebw, 4);
+            g2.setColor(new Color(80, 200, 120));
+            g2.fillRect(ex - er, ey - er - 7, (int) (ebw * e.hp / (float) e.maxHp), 4);
+        }
+
+        // Player
+        int pr = (int) (11 * scale);
+        int pxx = ox + (int) (dg.getPlayerX() * scale);
+        int pyy = oy + (int) (dg.getPlayerY() * scale);
+        g2.setComposite(dg.getPlayerInvuln() > 0 && ((int) (dg.getPlayerInvuln() * 10)) % 2 == 0
+            ? AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.4f)
+            : AlphaComposite.SrcOver);
+        g2.setColor(ACCENT);
+        g2.fillOval(pxx - pr, pyy - pr, pr * 2, pr * 2);
+        g2.setComposite(AlphaComposite.SrcOver);
+        g2.setColor(Color.WHITE);
+        g2.drawLine(pxx, pyy, pxx + (int) (dg.getPlayerFacingX() * 16 * scale), pyy + (int) (dg.getPlayerFacingY() * 16 * scale));
+
+        // Attack swing arc
+        if (dg.getAttackTimer() > 0) {
+            double ang = Math.toDegrees(Math.atan2(dg.getPlayerFacingY(), dg.getPlayerFacingX()));
+            g2.setColor(new Color(255, 255, 255, 150));
+            g2.setStroke(new BasicStroke(3));
+            g2.drawArc(pxx - pr * 3, pyy - pr * 3, pr * 6, pr * 6, (int) ang - 45, 90);
+            g2.setStroke(new BasicStroke(1));
+        }
+
+        // HUD
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        g2.setColor(TEXT);
+        g2.drawString("Level " + dg.getLevel() + "/" + DungeonGame.MAX_LEVEL, 15, 24);
+        g2.setColor(GOLD);
+        g2.drawString("Keys: " + dg.getKeyCount() + "   Treasure: " + dg.getTreasureCount()
+            + "   Kills: " + dg.getKills(), 15, 46);
+
+        int barW = 130, barH = 12;
+        int bx = w - barW - 15, by = 18;
+        g2.setColor(new Color(50, 20, 20));
+        g2.fillRoundRect(bx, by, barW, barH, 6, 6);
+        g2.setColor(new Color(220, 70, 70));
+        g2.fillRoundRect(bx, by, (int) (barW * dg.getPlayerHp() / (float) dg.getMaxHp()), barH, 6, 6);
+        g2.setColor(TEXT);
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        g2.drawString(dg.getPlayerHp() + "/" + dg.getMaxHp(), bx + barW + 8, by + 11);
+
         g2.setColor(TEXT_DIM);
         g2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        String turn;
-        if (cg.isWhiteInCheck()) {
-            turn = "\u26A0 CHECK! Your king is under attack — get it safe";
-        } else if (cg.isBlackInCheck()) {
-            turn = "\u2694 Check on black — keep the pressure on!";
-        } else if (cg.isPromotionPending()) {
-            turn = "\u2B50 Pawn reached the last rank \u2014 choose its promotion piece";
-        } else {
-            turn = cg.isWhiteToMove() ? "Your turn (white)" : "AI thinking...";
-        }
-        g2.drawString(turn + "  |  Click piece \u2192 click destination  |  [" + currentDifficulty.getDisplayName() + "]", 15, h - 5);
+        g2.drawString("WASD move | Space attack | E open doors | Find the key, reach the exit | [" + currentDifficulty.getDisplayName() + "]", 15, h - 10);
     }
 
     private void drawCenter(Graphics2D g2, String msg, int w, int h) {
@@ -1114,6 +1680,11 @@ public class GamePlayScreen extends JFrame {
         if ("Snake".equals(gameName) && game.getScore() >= 1000) am.grantAchievement(player.getUsername(), "SNAKE_MASTER");
         if ("Chess".equals(gameName) && won) am.grantAchievement(player.getUsername(), "CHESS_BEGINNER");
         if (player.getWins() >= 10 && player.getAllGameWins().size() >= 2) am.grantAchievement(player.getUsername(), "MULTI_GAME_CHAMPION");
+
+        // Game-over jingle as the result dialog appears.
+        if (result.getStatus() == GameResult.Status.WON) SoundFx.win();
+        else if (result.getStatus() == GameResult.Status.LOST) SoundFx.lose();
+        else SoundFx.draw();
 
         int c = showResultDialog(result, xp, lvlUp, hs);
         dispose();

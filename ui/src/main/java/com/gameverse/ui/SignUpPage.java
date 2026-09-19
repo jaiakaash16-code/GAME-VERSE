@@ -9,9 +9,10 @@ import java.awt.*;
 /**
  * Sign Up page GUI for GameVerse platform.
  * Allows new users to create accounts with email and password.
+ * Styled with the shared UiKit: dark brand sidebar + rounded form card.
  */
 public class SignUpPage extends JFrame {
-    
+
     private JTextField emailField;
     private JButton signUpButton;
     private JButton backButton;
@@ -21,266 +22,227 @@ public class SignUpPage extends JFrame {
     private PasswordFieldRow confirmRow;
     private PlayerManager playerManager;
     private SignUpCallback signUpCallback;
-    
-    // UI Constants
-    private static final Color BACKGROUND_COLOR = new Color(20, 20, 30);
-    private static final Color PANEL_COLOR = new Color(30, 30, 45);
-    private static final Color BUTTON_COLOR = new Color(100, 200, 100);
-    private static final Color BUTTON_HOVER_COLOR = new Color(120, 220, 120);
-    private static final Color TEXT_COLOR = new Color(200, 200, 220);
-    private static final Color ERROR_COLOR = new Color(255, 100, 100);
-    private static final Color PLACEHOLDER_COLOR = new Color(120, 120, 140);
-    private static final String EMAIL_PLACEHOLDER = "Enter your email";
-    
+
+    private static final String EMAIL_PLACEHOLDER = "Choose an email";
+
     public interface SignUpCallback {
         void onSignUpSuccess(Player player);
         void onSignUpFailed(String message);
         void onBackToLogin();
     }
-    
+
     public SignUpPage(SignUpCallback callback) {
         this.signUpCallback = callback;
         this.playerManager = PlayerManager.getInstance();
-        
+
         initializeUI();
-        setupLayout();
         attachListeners();
-        
+
         setVisible(true);
     }
-    
+
     private void initializeUI() {
-        setTitle("GameVerse - Create Account");
+        setTitle("GameVerse — Create Account");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(500, 650);
+        setSize(860, 640);
         setLocationRelativeTo(null);
-        setResizable(false);
-        
-        JPanel mainPanel = new JPanel();
-        mainPanel.setBackground(BACKGROUND_COLOR);
-        setContentPane(mainPanel);
+        setResizable(true);
+
+        JPanel root = new JPanel(new BorderLayout(0, 0));
+        root.setBackground(UiKit.BG);
+        root.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
+        setContentPane(root);
+
+        // ── Card container: brand sidebar (left) + form (right) ──
+        JPanel card = UiKit.card(20);
+
+        card.add(createBrandPanel(), BorderLayout.WEST);
+        card.add(createFormPanel(), BorderLayout.CENTER);
+
+        root.add(card, BorderLayout.CENTER);
     }
-    
-    private void setupLayout() {
-        JPanel mainPanel = (JPanel) getContentPane();
-        mainPanel.setLayout(new BorderLayout(0, 20));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(40, 50, 40, 50));
-        
-        // Title Panel
-        JPanel titlePanel = createTitlePanel();
-        mainPanel.add(titlePanel, BorderLayout.NORTH);
-        
-        // Content Panel
-        JPanel contentPanel = createContentPanel();
-        mainPanel.add(contentPanel, BorderLayout.CENTER);
-        
-        // Button Panel
-        JPanel buttonPanel = createButtonPanel();
-        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+    /* ═══════════════ Brand sidebar ═══════════════ */
+
+    private JPanel createBrandPanel() {
+        JPanel side = new UiKit.RoundedPanel(new BorderLayout(0, 0),
+            new Color(24, 44, 38), new Color(50, 96, 78), 16, true);
+        side.setPreferredSize(new Dimension(300, 0));
+        side.setBorder(BorderFactory.createEmptyBorder(28, 26, 24, 26));
+
+        JPanel top = UiKit.verticalBox();
+
+        JLabel logo = new JLabel("🎮", SwingConstants.CENTER);
+        logo.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 34));
+        logo.setAlignmentX(Component.CENTER_ALIGNMENT);
+        top.add(logo);
+        top.add(Box.createVerticalStrut(10));
+
+        JLabel title = new JLabel("GameVerse");
+        title.setFont(UiKit.TITLE);
+        title.setForeground(new Color(230, 248, 238));
+        title.setAlignmentX(Component.CENTER_ALIGNMENT);
+        top.add(title);
+        top.add(Box.createVerticalStrut(6));
+
+        JLabel tagline = new JLabel("Join the arcade.");
+        tagline.setFont(UiKit.BODY);
+        tagline.setForeground(new Color(160, 195, 175));
+        tagline.setAlignmentX(Component.CENTER_ALIGNMENT);
+        top.add(tagline);
+
+        side.add(top, BorderLayout.NORTH);
+
+        // Perks list in the middle
+        JPanel perks = UiKit.verticalBox();
+        perks.add(Box.createVerticalGlue());
+        perks.add(perkRow("⚡", "Instant account setup"));
+        perks.add(Box.createVerticalStrut(10));
+        perks.add(perkRow("🎯", "Daily missions and rewards"));
+        perks.add(Box.createVerticalStrut(10));
+        perks.add(perkRow("🥇", "High-score history saved"));
+        perks.add(Box.createVerticalStrut(10));
+        perks.add(perkRow("🤝", "Free forever — no card needed"));
+        perks.add(Box.createVerticalGlue());
+        side.add(perks, BorderLayout.CENTER);
+
+        JLabel footer = new JLabel("No password ever leaves your PC", SwingConstants.CENTER);
+        footer.setFont(UiKit.SMALL);
+        footer.setForeground(new Color(115, 155, 135));
+        side.add(footer, BorderLayout.SOUTH);
+
+        return side;
     }
-    
-    private JPanel createTitlePanel() {
-        JPanel panel = new JPanel();
-        panel.setBackground(BACKGROUND_COLOR);
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        
-        JLabel titleLabel = new JLabel("GameVerse");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 36));
-        titleLabel.setForeground(BUTTON_COLOR);
-        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        
-        JLabel subtitleLabel = new JLabel("Create Your Account");
-        subtitleLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        subtitleLabel.setForeground(TEXT_COLOR);
-        subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        
-        panel.add(titleLabel);
-        panel.add(Box.createVerticalStrut(10));
-        panel.add(subtitleLabel);
-        panel.add(Box.createVerticalStrut(20));
-        
-        return panel;
+
+    private JPanel perkRow(String icon, String text) {
+        JPanel row = UiKit.leftFlow(10, 0);
+        JLabel i = new JLabel(icon);
+        i.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 15));
+        JLabel t = new JLabel(text);
+        t.setFont(UiKit.BODY);
+        t.setForeground(new Color(180, 210, 195));
+        row.add(i);
+        row.add(t);
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
+        return row;
     }
-    
-    private JPanel createContentPanel() {
-        JPanel panel = new JPanel();
-        panel.setBackground(BACKGROUND_COLOR);
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        
-        // Email Label and Field
-        JLabel emailLabel = createLabel("Email Address");
-        panel.add(emailLabel);
-        
-        emailField = createTextField(EMAIL_PLACEHOLDER);
-        panel.add(emailField);
-        panel.add(Box.createVerticalStrut(15));
-        
-        // Password Label and Field (with inline Show/Hide toggle)
-        JLabel passwordLabel = createLabel("Password");
-        panel.add(passwordLabel);
-        
-        passwordRow = new PasswordFieldRow(BUTTON_COLOR, BUTTON_HOVER_COLOR);
-        panel.add(passwordRow);
-        panel.add(Box.createVerticalStrut(4));
-        
+
+    /* ═══════════════ Form panel ═══════════════ */
+
+    private JPanel createFormPanel() {
+        JPanel form = UiKit.verticalBox();
+        form.setBorder(BorderFactory.createEmptyBorder(32, 40, 26, 40));
+
+        JLabel heading = new JLabel("Create your account");
+        heading.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        heading.setForeground(UiKit.TEXT);
+        heading.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel sub = new JLabel("Free, instant, and saved locally on your machine.");
+        sub.setFont(UiKit.BODY);
+        sub.setForeground(UiKit.TEXT_DIM);
+        sub.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        form.add(heading);
+        form.add(Box.createVerticalStrut(3));
+        form.add(sub);
+        form.add(Box.createVerticalStrut(22));
+
+        // Email
+        form.add(UiKit.fieldLabel("Email address"));
+        form.add(Box.createVerticalStrut(6));
+        emailField = UiKit.placeholderField(EMAIL_PLACEHOLDER);
+        form.add(emailField);
+        form.add(Box.createVerticalStrut(14));
+
+        // Password
+        form.add(UiKit.fieldLabel("Password"));
+        form.add(Box.createVerticalStrut(6));
+        passwordRow = new PasswordFieldRow();
+        form.add(passwordRow);
+        form.add(Box.createVerticalStrut(4));
+
         // The requirements list is intentionally not shown here; the Check
         // Password link pops up only the rules the typed password is missing.
         checkPasswordButton = createCheckPasswordButton();
         checkPasswordButton.addActionListener(e ->
             PasswordFieldRow.showPasswordCheck(this, passwordRow.getPassword()));
-        panel.add(createCheckRow(checkPasswordButton));
-        panel.add(Box.createVerticalStrut(14));
-        
-        // Confirm Password Label and Field
-        JLabel confirmLabel = createLabel("Confirm Password");
-        panel.add(confirmLabel);
-        
-        confirmRow = new PasswordFieldRow(BUTTON_COLOR, BUTTON_HOVER_COLOR);
-        panel.add(confirmRow);
-        panel.add(Box.createVerticalStrut(20));
-        
-        // Error Message Label
-        errorMessageLabel = new JLabel("");
-        errorMessageLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-        errorMessageLabel.setForeground(ERROR_COLOR);
-        panel.add(errorMessageLabel);
-        
-        return panel;
+        form.add(createRightRow(checkPasswordButton));
+        form.add(Box.createVerticalStrut(10));
+
+        // Confirm Password
+        form.add(UiKit.fieldLabel("Confirm password"));
+        form.add(Box.createVerticalStrut(6));
+        confirmRow = new PasswordFieldRow();
+        form.add(confirmRow);
+        form.add(Box.createVerticalStrut(16));
+
+        // Error message
+        errorMessageLabel = new JLabel(" ");
+        errorMessageLabel.setFont(UiKit.SMALL);
+        errorMessageLabel.setForeground(UiKit.ERROR);
+        errorMessageLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        form.add(errorMessageLabel);
+        form.add(Box.createVerticalStrut(6));
+
+        // Sign Up button
+        signUpButton = greenButton("Create Account  ✓");
+        signUpButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        form.add(signUpButton);
+        form.add(Box.createVerticalStrut(12));
+
+        // Back to login switch
+        backButton = UiKit.ghostButton("Already have an account? Log in");
+        backButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        form.add(backButton);
+
+        form.add(Box.createVerticalGlue());
+        return form;
     }
-    
-    private JPanel createButtonPanel() {
-        JPanel panel = new JPanel();
-        panel.setBackground(BACKGROUND_COLOR);
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        
-        // Sign Up Button
-        signUpButton = createButton("Create Account", BUTTON_COLOR, BUTTON_HOVER_COLOR);
-        panel.add(signUpButton);
-        panel.add(Box.createVerticalStrut(10));
-        
-        // Back Button
-        backButton = createButton("Back to Login",
-            new Color(60, 80, 100), new Color(80, 100, 120));
-        panel.add(backButton);
-        
-        return panel;
+
+    /** Filled green CTA — same shape as the primary button, green gradient. */
+    private JButton greenButton(String text) {
+        UiKit.FilledButton b = new UiKit.FilledButton(text,
+            new Color(60, 175, 110), new Color(40, 140, 90), new Color(90, 200, 140), true);
+        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return b;
     }
-    
-    private JLabel createLabel(String text) {
-        JLabel label = new JLabel(text);
-        label.setFont(new Font("Arial", Font.BOLD, 13));
-        label.setForeground(TEXT_COLOR);
-        return label;
-    }
-    
-    private JTextField createTextField(String placeholder) {
-        JTextField field = new JTextField();
-        field.setFont(new Font("Arial", Font.PLAIN, 13));
-        field.setBackground(PANEL_COLOR);
-        field.setForeground(TEXT_COLOR);
-        field.setCaretColor(BUTTON_COLOR);
-        field.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(70, 70, 90), 1),
-            BorderFactory.createEmptyBorder(8, 10, 8, 10)
-        ));
-        field.setPreferredSize(new Dimension(300, 40));
-        field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        
-        // Placeholder text
-        field.setText(placeholder);
-        field.setForeground(PLACEHOLDER_COLOR);
-        
-        field.addFocusListener(new java.awt.event.FocusAdapter() {
-            @Override
-            public void focusGained(java.awt.event.FocusEvent e) {
-                if (field.getText().equals(placeholder)) {
-                    field.setText("");
-                    field.setForeground(TEXT_COLOR);
-                } else {
-                    field.selectAll();
-                }
-            }
-            
-            @Override
-            public void focusLost(java.awt.event.FocusEvent e) {
-                if (field.getText().isEmpty()) {
-                    field.setText(placeholder);
-                    field.setForeground(PLACEHOLDER_COLOR);
-                }
-            }
-        });
-        
-        return field;
-    }
-    
+
     private JButton createCheckPasswordButton() {
-        JButton check = new JButton("Check Password");
-        check.setFont(new Font("Arial", Font.BOLD, 11));
-        check.setForeground(BUTTON_COLOR);
+        JButton check = new JButton("Password rules?");
+        check.setFont(UiKit.SMALL);
+        check.setForeground(UiKit.ACCENT);
         check.setContentAreaFilled(false);
         check.setBorderPainted(false);
         check.setFocusPainted(false);
         check.setCursor(new Cursor(Cursor.HAND_CURSOR));
         check.setToolTipText("Show missing password requirements");
         check.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseEntered(java.awt.event.MouseEvent e) {
-                check.setForeground(BUTTON_HOVER_COLOR);
-            }
-            
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent e) {
-                check.setForeground(BUTTON_COLOR);
-            }
+            @Override public void mouseEntered(java.awt.event.MouseEvent e) { check.setForeground(UiKit.ACCENT_HOVER); }
+            @Override public void mouseExited(java.awt.event.MouseEvent e)  { check.setForeground(UiKit.ACCENT); }
         });
         return check;
     }
-    
-    private JPanel createCheckRow(JComponent control) {
+
+    private JPanel createRightRow(JComponent control) {
         JPanel row = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        row.setBackground(BACKGROUND_COLOR);
+        row.setOpaque(false);
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 22));
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
         row.add(control);
         return row;
     }
-    
-    private JButton createButton(String text, Color baseColor, Color hoverColor) {
-        JButton button = new JButton(text);
-        button.setFont(new Font("Arial", Font.BOLD, 13));
-        button.setForeground(Color.WHITE);
-        button.setBackground(baseColor);
-        button.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-        button.setFocusPainted(false);
-        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        button.setPreferredSize(new Dimension(300, 45));
-        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
-        button.setAlignmentX(Component.CENTER_ALIGNMENT);
-        
-        // Hover effect
-        button.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseEntered(java.awt.event.MouseEvent e) {
-                button.setBackground(hoverColor);
-            }
-            
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent e) {
-                button.setBackground(baseColor);
-            }
-        });
-        
-        return button;
-    }
-    
+
     private void attachListeners() {
         // Sign Up Button
         signUpButton.addActionListener(e -> handleSignUp());
-        
+
         // Pressing Enter walks through the fields, then submits
         emailField.addActionListener(e -> passwordRow.getField().requestFocusInWindow());
         passwordRow.getField().addActionListener(e -> confirmRow.getField().requestFocusInWindow());
         confirmRow.getField().addActionListener(e -> handleSignUp());
-        
+
         // Back Button
         backButton.addActionListener(e -> {
             if (signUpCallback != null) {
@@ -289,7 +251,7 @@ public class SignUpPage extends JFrame {
             dispose();
         });
     }
-    
+
     private void handleSignUp() {
         String email = emailField.getText().trim();
         if (email.isEmpty() || email.equalsIgnoreCase(EMAIL_PLACEHOLDER)) {
@@ -297,13 +259,13 @@ public class SignUpPage extends JFrame {
         }
         String password = passwordRow.getPassword();
         String confirmPassword = confirmRow.getPassword();
-        
+
         // Clear previous error
-        errorMessageLabel.setText("");
-        
+        errorMessageLabel.setText(" ");
+
         // Validate email
         String validationError = LoginValidator.validateLoginCredentials(email, password);
-        
+
         if (!validationError.isEmpty()) {
             errorMessageLabel.setText(validationError);
             if (LoginValidator.isValidEmail(email)) {
@@ -313,39 +275,39 @@ public class SignUpPage extends JFrame {
             }
             return;
         }
-        
+
         // Check if passwords match
         if (!password.equals(confirmPassword)) {
             errorMessageLabel.setText("Passwords do not match");
             confirmRow.getField().requestFocusInWindow();
             return;
         }
-        
+
         // Check if email already exists
         if (playerManager.playerExists(email)) {
             errorMessageLabel.setText("Email already registered. Please login instead.");
             return;
         }
-        
+
         // Create new player
         Player player = playerManager.createPlayer(email);
-        
+
         if (player == null) {
             errorMessageLabel.setText("Failed to create account. Please try again.");
             return;
         }
-        
+
         // Set as current player
         playerManager.setCurrentPlayer(email);
-        
+
         // Notify callback
         if (signUpCallback != null) {
             signUpCallback.onSignUpSuccess(player);
         }
-        
+
         dispose();
     }
-    
+
     /**
      * Show error message on sign up page
      * @param message the error message to display
@@ -353,18 +315,18 @@ public class SignUpPage extends JFrame {
     public void showError(String message) {
         errorMessageLabel.setText(message);
     }
-    
+
     /**
      * Clear all fields
      */
     public void clearFields() {
         emailField.setText(EMAIL_PLACEHOLDER);
-        emailField.setForeground(PLACEHOLDER_COLOR);
+        emailField.setForeground(UiKit.TEXT_DIM);
         passwordRow.clear();
         confirmRow.clear();
-        errorMessageLabel.setText("");
+        errorMessageLabel.setText(" ");
     }
-    
+
     /**
      * Running this class directly from an IDE launches the full GameVerse flow:
      * the sign-up page is shown by GameLauncher, and a successful sign-up

@@ -17,11 +17,7 @@ import java.util.List;
  */
 public class PasswordFieldRow extends JPanel {
 
-    private static final Color PANEL_COLOR = new Color(30, 30, 45);
-    private static final Color BACKGROUND_COLOR = new Color(20, 20, 30);
-    private static final Color FIELD_BORDER_COLOR = new Color(70, 70, 90);
-    private static final Color TEXT_COLOR = new Color(200, 200, 220);
-    private static final Color TOGGLE_HOVER_COLOR = new Color(40, 40, 60);
+    private static final Color TOGGLE_HOVER_COLOR = new Color(40, 42, 62);
     private static final Color VISIBLE_TEXT_COLOR = new Color(255, 190, 90);
 
     private final Color accentColor;
@@ -29,51 +25,113 @@ public class PasswordFieldRow extends JPanel {
     private final JButton toggle = new JButton("Show");
     private boolean passwordVisible;
 
+    /** Creates the row with the shared UiKit accent color. */
+    public PasswordFieldRow() {
+        this(UiKit.ACCENT);
+    }
+
+    public PasswordFieldRow(Color accentColor) {
+        this(accentColor, null);
+    }
+
+    /** @deprecated use {@link #PasswordFieldRow()} — the hover color is derived now. */
+    @Deprecated
     public PasswordFieldRow(Color accentColor, Color accentHoverColor) {
         super(new BorderLayout(6, 0));
-        setBackground(BACKGROUND_COLOR);
+        setOpaque(false);
         setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
         this.accentColor = accentColor;
 
-        field.setFont(new Font("Arial", Font.PLAIN, 13));
-        field.setBackground(PANEL_COLOR);
-        field.setForeground(TEXT_COLOR);
-        field.setCaretColor(accentColor);
+        field.setFont(UiKit.BODY);
+        field.setBackground(UiKit.FIELD_BG);
+        field.setForeground(UiKit.TEXT);
+        field.setCaretColor(UiKit.ACCENT);
+        field.setSelectionColor(new Color(100, 150, 255, 90));
         field.setEchoChar('\u2022');
         field.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(FIELD_BORDER_COLOR, 1),
-            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+            new FieldBorder(UiKit.FIELD_LINE),
+            BorderFactory.createEmptyBorder(10, 12, 10, 12)
         ));
         field.setPreferredSize(new Dimension(300, 40));
         field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        field.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent e) {
+                field.repaint();
+            }
 
-        toggle.setFont(new Font("Arial", Font.BOLD, 11));
-        toggle.setBackground(PANEL_COLOR);
+            @Override
+            public void focusLost(java.awt.event.FocusEvent e) {
+                field.repaint();
+            }
+        });
+
+        toggle.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        toggle.setBackground(UiKit.FIELD_BG);
         toggle.setForeground(accentColor);
         toggle.setFocusPainted(false);
-        toggle.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(FIELD_BORDER_COLOR, 1),
-            BorderFactory.createEmptyBorder(0, 10, 0, 10)
-        ));
+        toggle.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
         toggle.setCursor(new Cursor(Cursor.HAND_CURSOR));
         toggle.setToolTipText("Show password");
         toggle.setPreferredSize(new Dimension(64, 40));
         toggle.setMaximumSize(new Dimension(64, 40));
+        toggle.setContentAreaFilled(false);
+        toggle.setCursor(new Cursor(Cursor.HAND_CURSOR));
         toggle.addActionListener(e -> toggleVisibility());
         toggle.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
                 toggle.setBackground(TOGGLE_HOVER_COLOR);
+                toggle.setOpaque(true);
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                toggle.setBackground(PANEL_COLOR);
+                toggle.setBackground(UiKit.FIELD_BG);
             }
         });
 
         add(field, BorderLayout.CENTER);
         add(toggle, BorderLayout.EAST);
+    }
+
+    /** Rounded border for the password field; glows blue while focused. */
+    private static class FieldBorder implements javax.swing.border.Border {
+        private final Color base;
+
+        FieldBorder(Color base) {
+            this.base = base;
+        }
+
+        @Override
+        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            boolean focused = c instanceof JComponent && ((JComponent) c).hasFocus();
+            g2.setColor(focused ? UiKit.FIELD_FOCUS : base);
+            g2.drawRoundRect(x, y, width - 1, height - 1, 12, 12);
+            g2.dispose();
+        }
+
+        @Override
+        public Insets getBorderInsets(Component c) {
+            return new Insets(10, 12, 10, 12);
+        }
+
+        @Override
+        public boolean isBorderOpaque() {
+            return false;
+        }
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setColor(UiKit.FIELD_BG);
+        g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 12, 12);
+        g2.dispose();
+        super.paintComponent(g);
     }
 
     /**
@@ -86,6 +144,7 @@ public class PasswordFieldRow extends JPanel {
         toggle.setText(passwordVisible ? "Hide" : "Show");
         toggle.setForeground(passwordVisible ? VISIBLE_TEXT_COLOR : accentColor);
         toggle.setToolTipText(passwordVisible ? "Hide password" : "Show password");
+        toggle.repaint();
         field.requestFocusInWindow();
     }
 
@@ -110,6 +169,9 @@ public class PasswordFieldRow extends JPanel {
      * @param password the password value to check
      */
     public static void showPasswordCheck(Component parent, String password) {
+        UIManager.put("OptionPane.background", UiKit.PANEL_BG);
+        UIManager.put("Panel.background", UiKit.PANEL_BG);
+        UIManager.put("OptionPane.messageForeground", UiKit.TEXT);
         if (password == null || password.isEmpty()) {
             JOptionPane.showMessageDialog(parent,
                 "Type a password first, then run the check.",

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Game-Verse | Redirecting...</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      font-family: 'Courier New', Courier, monospace;
+      background: radial-gradient(circle at center, #0a0a14 0%, #05050a 100%);
+      color: #ffffff;
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* Animated background grid */
+    body::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255, 0, 60, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 0, 60, 0.06) 1px, transparent 1px);
+      background-size: 40px 40px;
+      animation: gridShift 6s linear infinite;
+      z-index: 0;
+    }
+
+    @keyframes gridShift {
+      from { background-position: 0 0, 0 0; }
+      to   { background-position: 40px 40px, 40px 40px; }
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 40px 60px;
+      border: 2px solid rgba(255, 0, 60, 0.35);
+      border-radius: 14px;
+      background: rgba(10, 10, 20, 0.85);
+      box-shadow:
+        0 0 30px rgba(255, 0, 60, 0.25),
+        inset 0 0 20px rgba(255, 0, 60, 0.08);
+      max-width: 560px;
+      width: 90%;
+      backdrop-filter: blur(4px);
+    }
+
+    .shield {
+      width: 90px;
+      height: 90px;
+      margin: 0 auto 20px;
+      position: relative;
+      filter: drop-shadow(0 0 10px rgba(255, 0, 60, 0.7));
+      animation: pulseGlow 1.6s ease-in-out infinite;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { filter: drop-shadow(0 0 6px rgba(255, 0, 60, 0.5)); transform: scale(1); }
+      50%      { filter: drop-shadow(0 0 18px rgba(255, 0, 60, 0.9)); transform: scale(1.04); }
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      letter-spacing: 3px;
+      color: #ff003c;
+      text-shadow: 0 0 12px rgba(255, 0, 60, 0.6);
+      margin-bottom: 14px;
+      text-transform: uppercase;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      letter-spacing: 4px;
+      color: #00e6ff;
+      margin-bottom: 22px;
+      opacity: 0.85;
+    }
+
+    .log-message {
+      font-size: 1rem;
+      color: #e0e0e0;
+      line-height: 1.6;
+      padding: 14px 18px;
+      background: rgba(0, 0, 0, 0.4);
+      border-left: 3px solid #ff003c;
+      border-radius: 4px;
+      margin-bottom: 22px;
+      text-align: left;
+      min-height: 70px;
+    }
+
+    .log-message .prompt {
+      color: #00e6ff;
+      font-weight: bold;
+    }
+
+    .log-message .ok {
+      color: #00ff88;
+      font-weight: bold;
+    }
+
+    .log-message .warn {
+      color: #ffaa00;
+    }
+
+    .countdown {
+      font-size: 0.95rem;
+      letter-spacing: 2px;
+      color: #b0b0b0;
+      margin-bottom: 18px;
+    }
+
+    .countdown strong {
+      color: #ff003c;
+      font-size: 1.1rem;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #ff003c, #ff5577);
+      box-shadow: 0 0 10px rgba(255, 0, 60, 0.7);
+      transition: width 0.1s linear;
+    }
+
+    .footer {
+      font-size: 0.7rem;
+      letter-spacing: 3px;
+      color: #555;
+      margin-top: 10px;
+    }
+
+    .dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background: #00e6ff;
+      border-radius: 50%;
+      margin: 0 4px;
+      animation: blink 1.2s infinite;
+    }
+
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes blink {
+      0%, 100% { opacity: 0.2; }
+      50%      { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Inline SVG shield logo matching the brand -->
+    <svg class="shield" viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="shieldGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#ff003c"/>
+          <stop offset="100%" stop-color="#cc0033"/>
+        </linearGradient>
+      </defs>
+      <path d="M50 5 L90 18 L90 55 Q90 85 50 105 Q10 85 10 55 L10 18 Z"
+            fill="none" stroke="url(#shieldGrad)" stroke-width="3"
+            stroke-dasharray="5,3" />
+      <path d="M50 18 L78 28 L78 55 Q78 78 50 92 Q22 78 22 55 L22 28 Z"
+            fill="rgba(255, 0, 60, 0.15)" stroke="#ff003c" stroke-width="1.5"/>
+      <polygon points="50,30 62,55 50,80 38,55" fill="#ff003c" opacity="0.85"/>
+      <polygon points="50,42 56,55 50,68 44,55" fill="#00e6ff" opacity="0.8"/>
+    </svg>
+
+    <h1>Game-Verse</h1>
+    <div class="subtitle">Arcade Ecosystem // Protocol 2.4</div>
+
+    <div class="log-message" id="logMessage">
+      <span class="prompt">&gt;</span> Initializing secure handshake<span class="dot"></span><span class="dot"></span><span class="dot"></span><br />
+      <span class="ok">[OK]</span> Session token validated<br />
+      <span class="warn">[!]</span> Redirecting to authentication portal...
+    </div>
+
+    <div class="countdown">
+      Redirecting in <strong id="countdown">5</strong> seconds
+    </div>
+
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+
+    <div class="footer">AUTO-REDIRECT // DO NOT CLOSE</div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // CONFIGURATION ----------------------------------------------------
+      const REDIRECT_DELAY_MS = 5000;        // exactly 5 seconds
+      const TICK_INTERVAL_MS  = 100;         // smoothness for the progress bar
+      const TARGET_URL        = 'login.html'; // destination (relative path)
+
+      // State ---------------------------------------------------------
+      let remainingMs = REDIRECT_DELAY_MS;
+      let elapsedMs   = 0;
+
+      const countdownEl   = document.getElementById('countdown');
+      const progressEl    = document.getElementById('progressFill');
+
+      // Render loop ----------------------------------------------------
+      const tick = setInterval(function () {
+        elapsedMs   += TICK_INTERVAL_MS;
+        remainingMs -= TICK_INTERVAL_MS;
+
+        if (remainingMs < 0) remainingMs = 0;
+
+        // Update visible countdown (rounded up so it shows 5, 4, 3, 2, 1)
+        countdownEl.textContent = Math.ceil(remainingMs / 1000);
+
+        // Update progress bar
+        const percent = Math.min(100, (elapsedMs / REDIRECT_DELAY_MS) * 100);
+        progressEl.style.width = percent + '%';
+
+        if (remainingMs <= 0) {
+          clearInterval(tick);
+          performRedirect();
+        }
+      }, TICK_INTERVAL_MS);
+
+      // Perform the redirect ------------------------------------------
+      function performRedirect() {
+        // Use replace so the redirect page is not stored in history
+        window.location.replace(TARGET_URL);
+      }
+
+      // Allow manual navigation: clicking anywhere redirects immediately
+      document.addEventListener('click', function () {
+        clearInterval(tick);
+        performRedirect();
+      });
+    })();
+  </script>
+</body>
+</html>

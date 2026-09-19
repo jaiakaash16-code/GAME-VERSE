@@ -45,6 +45,10 @@ public class ChessGame extends BaseGame {
     private int epRow = -1;
     private int epCol = -1;
 
+    // Squares of the most recent move (from/to), for UI last-move highlighting.
+    private int[] lastMoveFrom;
+    private int[] lastMoveTo;
+
     // Piece values for evaluation
     private static final int[] PIECE_VALUES = {
         0,   // ' '
@@ -108,6 +112,8 @@ public class ChessGame extends BaseGame {
         blackCastleQ = true;
         epRow = -1;
         epCol = -1;
+        lastMoveFrom = null;
+        lastMoveTo = null;
         whiteToMove = true;
         moveCount = 0;
         score = 0;
@@ -216,6 +222,8 @@ public class ChessGame extends BaseGame {
         applyMove(fr, fc, tr, tc);
         updateCastleRights(fr, fc, tr, tc, piece, captured, true);
         updateEnPassant(fr, fc, tr, tc, piece);
+        lastMoveFrom = new int[]{fr, fc};
+        lastMoveTo = new int[]{tr, tc};
         return true;
     }
 
@@ -580,6 +588,8 @@ public class ChessGame extends BaseGame {
         }
         updateCastleRights(fr, fc, tr, tc, piece, captured, false);
         updateEnPassant(fr, fc, tr, tc, piece);
+        lastMoveFrom = new int[]{fr, fc};
+        lastMoveTo = new int[]{tr, tc};
     }
 
     // ═══════════════ Attack scans / check ═══════════════
@@ -714,6 +724,46 @@ public class ChessGame extends BaseGame {
     public int getSelectedRow() { return selectedRow; }
     public int getSelectedCol() { return selectedCol; }
     public int getMoveCount() { return moveCount; }
+
+    /**
+     * Legal destination squares for the currently selected piece, as
+     * {row, col} pairs — used by the UI to draw move hints. Empty when
+     * nothing is selected. Mirrors the selection rules in handleClick:
+     * selecting a square with an enemy piece keeps the previous selection,
+     * so hints stay stable for the piece the player is moving.
+     */
+    public List<int[]> getLegalDestinations() {
+        List<int[]> dests = new ArrayList<>();
+        if (selectedRow < 0 || selectedCol < 0) return dests;
+        char piece = board[selectedRow][selectedCol];
+        if (piece == ' ' || !Character.isUpperCase(piece)) return dests;
+        for (int r = 0; r < SIZE; r++) {
+            for (int c = 0; c < SIZE; c++) {
+                if (r == selectedRow && c == selectedCol) continue;
+                if (canPieceMove(piece, selectedRow, selectedCol, r, c)
+                        && !leavesKingInCheck(selectedRow, selectedCol, r, c, true)) {
+                    dests.add(new int[]{r, c});
+                }
+            }
+            }
+        return dests;
+    }
+
+    /** From-square of the most recent move, or null if no move made yet. */
+    public int[] getLastMoveFrom() { return lastMoveFrom == null ? null : lastMoveFrom.clone(); }
+
+    /** To-square of the most recent move, or null if no move made yet. */
+    public int[] getLastMoveTo() { return lastMoveTo == null ? null : lastMoveTo.clone(); }
+
+    /** True if the player (white) may castle kingside right now. */
+    public boolean canWhiteCastleKingside() {
+        return whiteToMove && canCastle(true, true);
+    }
+
+    /** True if the player (white) may castle queenside right now. */
+    public boolean canWhiteCastleQueenside() {
+        return whiteToMove && canCastle(true, false);
+    }
 
     /** Unicode chess symbol for a piece character */
     public static String getSymbol(char piece) {

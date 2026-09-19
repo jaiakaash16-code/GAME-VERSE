@@ -21,8 +21,9 @@ GameVerse currently hosts the following games:
 - ❌ **Tic-Tac-Toe** - Simple turn-based game with AI
 - 🧠 **Memory Game** - Classic memory/matching game
 - 🏎️ **Mini Racing** - Simple racing game
-- 👁️ **DON'T LOOK** - Stealth horror: it only moves when you're not looking (launches in your browser from the hub)
-- 📡 **UNKNOWN SIGNAL** - Radio-mystery: tune, decode Morse, and discover the signal is aware of you (launches in your browser from the hub)
+- ⚽ **2D Soccer** - Fast-paced football vs AI — dribble, pass, shoot, score
+- 🧟 **Zombie Survival** - Wave-based survival — shoot the horde, beat the bosses
+- 🏰 **Dungeon Escape** - Explore rooms, grab keys, unlock doors, escape the dungeon
 
 More games can be added in the future using the modular game API.
 
@@ -118,7 +119,10 @@ BaseGame (Abstract)
   ├── TicTacToeGame
   ├── MemoryGame
   ├── ChessGame
-  └── RacingGame
+  ├── RacingGame
+  ├── SoccerGame
+  ├── ZombieGame
+  └── DungeonGame
 ```
 
 ---
@@ -150,8 +154,14 @@ GameVerse/
 │   │   └── TicTacToeGame.java
 │   ├── memory/
 │   │   └── MemoryGame.java
-│   └── racing/
-│       └── RacingGame.java
+│   ├── racing/
+│   │   └── RacingGame.java
+│   ├── soccer/
+│   │   └── SoccerGame.java
+│   ├── zombie/
+│   │   └── ZombieGame.java
+│   └── dungeon/
+│       └── DungeonGame.java
 │
 ├── achievements/                  # Achievement system
 │   ├── Achievement.java          # Achievement definition
@@ -314,6 +324,9 @@ The first version focuses on:
 - [ ] Chess (full implementation)
 - [ ] Memory Game (full implementation)
 - [ ] Racing Game (full implementation)
+- [x] 2D Soccer
+- [x] Zombie Survival
+- [x] Dungeon Escape
 
 ### Phase 3 — Player System ✅
 - [x] Player profile
